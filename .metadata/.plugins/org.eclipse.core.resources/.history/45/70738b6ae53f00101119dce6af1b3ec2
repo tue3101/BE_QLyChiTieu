@@ -1,0 +1,127 @@
+package dao;
+
+import config.DBConnection;
+import model.DanhMuc;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DanhMucDAO implements DAO<DanhMuc> {
+    private Connection conn;
+    
+    public DanhMucDAO() {
+        this.conn = DBConnection.getConnection();
+    }
+    
+    @Override
+    public List<DanhMuc> getAll() {
+        List<DanhMuc> list = new ArrayList<>();
+        String sql = "SELECT * FROM danhmuc";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                DanhMuc dm = new DanhMuc();
+                dm.setId_danhmuc(rs.getInt("id_danhmuc"));
+                dm.setId_nguoidung(rs.getInt("id_nguoidung"));
+                dm.setId_mau(rs.getInt("id_mau"));
+                dm.setId_icon(rs.getInt("id_icon"));
+                dm.setTen_danh_muc(rs.getString("ten_danh_muc"));
+                list.add(dm);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
+    @Override
+    public DanhMuc getById(int id) {
+        String sql = "SELECT * FROM danhmuc WHERE id_danhmuc = ?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if(rs.next()) {
+                DanhMuc dm = new DanhMuc();
+                dm.setId_danhmuc(rs.getInt("id_danhmuc"));
+                dm.setId_nguoidung(rs.getInt("id_nguoidung"));
+                dm.setId_mau(rs.getInt("id_mau"));
+                dm.setId_icon(rs.getInt("id_icon"));
+                dm.setTen_danh_muc(rs.getString("ten_danh_muc"));
+                return dm;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    @Override
+    public boolean add(DanhMuc dm) {
+        String sql = "INSERT INTO danhmuc(id_nguoidung, id_mau, id_icon, ten_danh_muc) VALUES(?,?,?,?)";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, dm.getId_nguoidung());
+            ps.setInt(2, dm.getId_mau());
+            ps.setInt(3, dm.getId_icon());
+            ps.setString(4, dm.getTen_danh_muc());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean update(DanhMuc dm) {
+        String sql = "UPDATE danhmuc SET id_nguoidung=?, id_mau=?, id_icon=?, ten_danh_muc=? WHERE id_danhmuc=?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, dm.getId_nguoidung());
+            ps.setInt(2, dm.getId_mau());
+            ps.setInt(3, dm.getId_icon());
+            ps.setString(4, dm.getTen_danh_muc());
+            ps.setInt(5, dm.getId_danhmuc());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean delete(int id) {
+        String sql = "DELETE FROM danhmuc WHERE id_danhmuc=?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public List<DanhMuc> getByUserId(int userId) {
+        List<DanhMuc> list = new ArrayList<>();
+        String sql = "SELECT * FROM danhmuc WHERE id_nguoidung = ?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                DanhMuc dm = new DanhMuc();
+                dm.setId_danhmuc(rs.getInt("id_danhmuc"));
+                dm.setId_nguoidung(rs.getInt("id_nguoidung"));
+                dm.setId_mau(rs.getInt("id_mau"));
+                dm.setId_icon(rs.getInt("id_icon"));
+                dm.setTen_danh_muc(rs.getString("ten_danh_muc"));
+                list.add(dm);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+} 

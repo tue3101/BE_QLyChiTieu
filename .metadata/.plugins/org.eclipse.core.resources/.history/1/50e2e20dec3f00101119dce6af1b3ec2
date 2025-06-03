@@ -1,0 +1,203 @@
+package dao;
+
+import config.DBConnection;
+import model.GiaoDich;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class GiaoDichDAO implements DAO<GiaoDich> {
+    private Connection conn;
+    
+    public GiaoDichDAO() {
+        this.conn = DBConnection.getConnection();
+    }
+    
+    @Override
+    public List<GiaoDich> getAll() {
+        List<GiaoDich> list = new ArrayList<>();
+        String sql = "SELECT * FROM giaodich";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                GiaoDich gd = new GiaoDich();
+                gd.setId_GD(String.valueOf(rs.getInt("id_GD")));
+                gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
+                gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
+                gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setSo_tien(rs.getDouble("so_tien"));
+                gd.setNgay(rs.getDate("ngay"));
+                gd.setThang(rs.getInt("thang"));
+                gd.setNam(rs.getInt("nam"));
+                gd.setGhi_chu(rs.getString("ghi_chu"));
+                list.add(gd);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
+    @Override
+    public GiaoDich getById(int id) {
+        String sql = "SELECT * FROM giaodich WHERE id_GD = ?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if(rs.next()) {
+                GiaoDich gd = new GiaoDich();
+                gd.setId_GD(String.valueOf(rs.getInt("id_GD")));
+                gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
+                gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
+                gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setSo_tien(rs.getDouble("so_tien"));
+                gd.setNgay(rs.getDate("ngay"));
+                gd.setThang(rs.getInt("thang"));
+                gd.setNam(rs.getInt("nam"));
+                gd.setGhi_chu(rs.getString("ghi_chu"));
+                return gd;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    @Override
+    public boolean add(GiaoDich gd) {
+        String sql = "INSERT INTO giaodich(id_danhmuc, id_nguoidung, id_loai, so_tien, ngay, thang, nam, ghi_chu) VALUES(?,?,?,?,?,?,?,?)";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, Integer.parseInt(gd.getId_danhmuc()));
+            ps.setInt(2, Integer.parseInt(gd.getId_nguoidung()));
+            ps.setInt(3, Integer.parseInt(gd.getId_loai()));
+            ps.setDouble(4, gd.getSo_tien());
+            ps.setDate(5, gd.getNgay());
+            ps.setInt(6, gd.getThang());
+            ps.setInt(7, gd.getNam());
+            ps.setString(8, gd.getGhi_chu());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean update(GiaoDich gd) {
+        String sql = "UPDATE giaodich SET id_danhmuc=?, id_nguoidung=?, id_loai=?, so_tien=?, ngay=?, thang=?, nam=?, ghi_chu=? WHERE id_GD=?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, Integer.parseInt(gd.getId_danhmuc()));
+            ps.setInt(2, Integer.parseInt(gd.getId_nguoidung()));
+            ps.setInt(3, Integer.parseInt(gd.getId_loai()));
+            ps.setDouble(4, gd.getSo_tien());
+            ps.setDate(5, gd.getNgay());
+            ps.setInt(6, gd.getThang());
+            ps.setInt(7, gd.getNam());
+            ps.setString(8, gd.getGhi_chu());
+            ps.setInt(9, Integer.parseInt(gd.getId_GD()));
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean delete(int id) {
+        String sql = "DELETE FROM giaodich WHERE id_GD=?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public List<GiaoDich> getByUserId(int userId) {
+        List<GiaoDich> list = new ArrayList<>();
+        String sql = "SELECT * FROM giaodich WHERE id_nguoidung = ?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                GiaoDich gd = new GiaoDich();
+                gd.setId_GD(String.valueOf(rs.getInt("id_GD")));
+                gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
+                gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
+                gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setSo_tien(rs.getDouble("so_tien"));
+                gd.setNgay(rs.getDate("ngay"));
+                gd.setThang(rs.getInt("thang"));
+                gd.setNam(rs.getInt("nam"));
+                gd.setGhi_chu(rs.getString("ghi_chu"));
+                list.add(gd);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
+    public List<GiaoDich> getByMonth(int userId, int month, int year) {
+        List<GiaoDich> list = new ArrayList<>();
+        String sql = "SELECT * FROM giaodich WHERE id_nguoidung = ? AND thang = ? AND nam = ?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            ps.setInt(2, month);
+            ps.setInt(3, year);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                GiaoDich gd = new GiaoDich();
+                gd.setId_GD(String.valueOf(rs.getInt("id_GD")));
+                gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
+                gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
+                gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setSo_tien(rs.getDouble("so_tien"));
+                gd.setNgay(rs.getDate("ngay"));
+                gd.setThang(rs.getInt("thang"));
+                gd.setNam(rs.getInt("nam"));
+                gd.setGhi_chu(rs.getString("ghi_chu"));
+                list.add(gd);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
+    // Tìm kiếm giao dịch theo từ khóa trong ghi chú của người dùng
+    public List<GiaoDich> searchByKeyword(int userId, String keyword) {
+        List<GiaoDich> list = new ArrayList<>();
+        String sql = "SELECT * FROM giaodich WHERE id_nguoidung = ? AND ghi_chu LIKE ?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            ps.setString(2, "%" + keyword + "%"); // Tìm kiếm từ khóa xuất hiện ở bất kỳ đâu trong ghi_chu
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                GiaoDich gd = new GiaoDich();
+                gd.setId_GD(String.valueOf(rs.getInt("id_GD")));
+                gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
+                gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
+                gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setSo_tien(rs.getDouble("so_tien"));
+                gd.setNgay(rs.getDate("ngay"));
+                gd.setThang(rs.getInt("thang"));
+                gd.setNam(rs.getInt("nam"));
+                gd.setGhi_chu(rs.getString("ghi_chu"));
+                list.add(gd);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+} 

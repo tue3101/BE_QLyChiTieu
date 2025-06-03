@@ -1,0 +1,1077 @@
+package api;
+
+import java.io.IOException;
+import java.util.List;
+import java.sql.Date; // Import Date
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException; // Import JsonSyntaxException
+import model.DanhMuc;
+import model.GiaoDich;
+import model.LoginResponse;
+import model.NguoiDung;
+import model.NganSach;
+import service.QuanLyChiTieuService;
+
+@WebServlet("/api/*")
+public class QuanLyChiTieuServlet extends HttpServlet {
+    private static final long serialVersionUID = 1L;
+    private QuanLyChiTieuService service;
+    private Gson gson;
+    private static final String USER_ID_ATTRIBUTE = "userId";
+
+    // Định nghĩa lớp POJO cho Login Request ở đây
+    private static class LoginRequest {
+        String email;
+        String password;
+    }
+
+    // Định nghĩa lớp POJO cho Change Password Request ở đây
+     private static class ChangePasswordRequest {
+         String oldPassword;
+         String newPassword;
+     }
+
+    public QuanLyChiTieuServlet() {
+        super();
+        service = new QuanLyChiTieuService();
+        gson = new Gson();
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String pathInfo = request.getPathInfo();
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        if (pathInfo == null || pathInfo.equals("/")) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("{\"error\": \"Endpoint not specified\"}");
+            return;
+        }
+
+        String[] pathParts = pathInfo.split("/");
+        String resource = pathParts.length > 1 ? pathParts[1] : null;
+
+        if ("categories".equals(resource)) {
+            handleGetCategories(request, response, pathParts);
+        } else if ("transactions".equals(resource)) {
+             handleGetTransactions(request, response, pathParts);
+        } else if ("transactions".equals(resource) && pathParts.length > 1 && "search".equals(pathParts[2])) {
+             handleSearchTransactions(request, response);
+        } else if ("budget".equals(resource)) {
+             handleGetBudget(request, response, pathParts);
+        } else if ("icons".equals(resource)) {
+             handleGetIcons(request, response);
+        } else if ("colors".equals(resource)) {
+             handleGetColors(request, response);
+        } else if ("transaction-types".equals(resource)) {
+             handleGetTransactionTypes(request, response);
+        } else if ("users".equals(resource) && pathParts.length > 2) {
+             // Expecting /api/users/{id} hoặc /api/users/{id}/password
+             try {
+                 int userId = Integer.parseInt(pathParts[2]);
+                 if (pathParts.length > 3 && "password".equals(pathParts[3])) {
+                     // Handle change password
+                     handleChangePassword(request, response, userId);
+                 } else {
+                     // Handle update user info
+                      handlePutUser(request, response, userId);
+                 }
+             } catch (NumberFormatException e) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid user ID\"}");
+             } catch (Exception e) {
+                 e.printStackTrace();
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Internal server error\"}");
+             }
+        } else {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("{\"error\": \"Endpoint not found\"}");
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String pathInfo = request.getPathInfo();
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        if (pathInfo == null || pathInfo.equals("/")) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("{\"error\": \"Endpoint not specified\"}");
+            return;
+        }
+
+        String[] pathParts = pathInfo.split("/");
+        String endpoint = pathParts.length > 1 ? pathParts[1] : null;
+
+        switch (endpoint) {
+            case "login":
+                handleLogin(request, response);
+                break;
+            case "register":
+                handleRegister(request, response);
+                break;
+            case "categories":
+                 handlePostCategories(request, response);
+                 break;
+            case "transactions":
+                 handlePostTransactions(request, response);
+                 break;
+            case "budget":
+                 handlePostBudget(request, response);
+                 break;
+            default:
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                response.getWriter().write("{\"error\": \"Endpoint not found\"}");
+                break;
+        }
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+         String pathInfo = request.getPathInfo();
+         response.setContentType("application/json");
+         response.setCharacterEncoding("UTF-8");
+
+         if (pathInfo == null || pathInfo.equals("/")) {
+             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+             response.getWriter().write("{\"error\": \"Endpoint not specified\"}");
+             return;
+         }
+
+         String[] pathParts = pathInfo.split("/");
+         String resource = pathParts.length > 1 ? pathParts[1] : null;
+
+         if ("categories".equals(resource) && pathParts.length > 2) {
+             // Expecting /api/categories/{id}
+             try {
+                 int categoryId = Integer.parseInt(pathParts[2]);
+                 handlePutCategories(request, response, categoryId);
+             } catch (NumberFormatException e) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid category ID\"}");
+             } catch (Exception e) {
+                 e.printStackTrace();
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Internal server error\"}");
+             }
+         } else if ("transactions".equals(resource) && pathParts.length > 2) {
+              // Expecting /api/transactions/{id}
+             try {
+                 int transactionId = Integer.parseInt(pathParts[2]);
+                 handlePutTransactions(request, response, transactionId);
+             } catch (NumberFormatException e) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid transaction ID\"}");
+             } catch (Exception e) {
+                 e.printStackTrace();
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Internal server error\"}");
+             }
+         } else if ("budget".equals(resource) && pathParts.length > 2) {
+              // Expecting /api/budget/{id}
+             try {
+                 int budgetId = Integer.parseInt(pathParts[2]);
+                 handlePutBudget(request, response, budgetId);
+             } catch (NumberFormatException e) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid budget ID\"}");
+             } catch (Exception e) {
+                 e.printStackTrace();
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Internal server error\"}");
+             }
+         } else if ("users".equals(resource) && pathParts.length > 2) {
+              // Expecting /api/users/{id} hoặc /api/users/{id}/password
+             try {
+                 int userId = Integer.parseInt(pathParts[2]);
+                 if (pathParts.length > 3 && "password".equals(pathParts[3])) {
+                     // Handle change password
+                     handleChangePassword(request, response, userId);
+                 } else {
+                     // Handle update user info
+                      handlePutUser(request, response, userId);
+                 }
+             } catch (NumberFormatException e) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid user ID\"}");
+             } catch (Exception e) {
+                 e.printStackTrace();
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Internal server error\"}");
+             }
+         } else {
+             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+             response.getWriter().write("{\"error\": \"Endpoint not found or missing ID\"}");
+         }
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String pathInfo = request.getPathInfo();
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        if (pathInfo == null || pathInfo.equals("/")) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("{\"error\": \"Endpoint not specified\"}");
+            return;
+        }
+
+        String[] pathParts = pathInfo.split("/");
+        String resource = pathParts.length > 1 ? pathParts[1] : null;
+
+        if ("categories".equals(resource) && pathParts.length > 2) {
+            // Expecting /api/categories/{id}
+            try {
+                int categoryId = Integer.parseInt(pathParts[2]);
+                handleDeleteCategories(request, response, categoryId);
+            } catch (NumberFormatException e) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"error\": \"Invalid category ID\"}");
+            } catch (Exception e) {
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"error\": \"Internal server error\"}");
+            }
+        } else if ("transactions".equals(resource) && pathParts.length > 2) {
+             // Expecting /api/transactions/{id}
+             try {
+                 int transactionId = Integer.parseInt(pathParts[2]);
+                 handleDeleteTransactions(request, response, transactionId);
+             } catch (NumberFormatException e) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid transaction ID\"}");
+             } catch (Exception e) {
+                 e.printStackTrace();
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Internal server error\"}");
+             }
+        } else if ("budget".equals(resource) && pathParts.length > 2) {
+             // Expecting /api/budget/{id}
+             try {
+                 int budgetId = Integer.parseInt(pathParts[2]);
+                 handleDeleteBudget(request, response, budgetId);
+             } catch (NumberFormatException e) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid budget ID\"}");
+             } catch (Exception e) {
+                 e.printStackTrace();
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Internal server error\"}");
+             }
+        } else {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("{\"error\": \"Endpoint not found or missing ID\"}");
+        }
+    }
+
+    private void handleGetCategories(HttpServletRequest request, HttpServletResponse response, String[] pathParts) throws IOException {
+        // Expecting /api/categories/user/{userId}
+        if (pathParts.length > 3 && "user".equals(pathParts[2])) {
+            try {
+                int requestedUserId = Integer.parseInt(pathParts[3]);
+                 // Lấy userId từ request attribute (do AuthFilter đặt)
+                Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+
+                if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
+                     // Người dùng yêu cầu danh mục của người khác hoặc không xác thực
+                     response.setStatus(HttpServletResponse.SC_FORBIDDEN); // Hoặc SC_UNAUTHORIZED
+                     response.getWriter().write("{\"error\": \"Forbidden - Cannot access other users' categories\"}");
+                     return;
+                }
+
+                List<DanhMuc> categories = service.getDanhMucByUserId(requestedUserId);
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write(gson.toJson(categories));
+            } catch (NumberFormatException e) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"error\": \"Invalid user ID\"}");
+            } catch (Exception e) {
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"error\": \"Internal server error\"}");
+            }
+        } else {
+             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+             response.getWriter().write("{\"error\": \"Endpoint not found. Use /api/categories/user/{userId}\"}");
+        }
+    }
+
+    private void handlePostCategories(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // Lấy userId từ request attribute (do AuthFilter đặt)
+        Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (userId == null) { // Should not happen if AuthFilter works correctly
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = request.getReader().readLine()) != null) {
+            sb.append(line);
+        }
+        String jsonRequest = sb.toString();
+
+        try {
+            DanhMuc newDanhMuc = gson.fromJson(jsonRequest, DanhMuc.class);
+            if (newDanhMuc == null || newDanhMuc.getTen_danh_muc() == null) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid category data\"}");
+                 return;
+            }
+            
+            newDanhMuc.setId_nguoidung(userId); // Gán userId từ token vào danh mục
+
+            boolean success = service.addDanhMuc(newDanhMuc);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_CREATED);
+                response.getWriter().write("{\"message\": \"Category added successfully\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Failed to add category\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handlePutCategories(HttpServletRequest request, HttpServletResponse response, int categoryId) throws IOException {
+         // Lấy userId từ request attribute (do AuthFilter đặt)
+        Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (userId == null) { // Should not happen if AuthFilter works correctly
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = request.getReader().readLine()) != null) {
+            sb.append(line);
+        }
+        String jsonRequest = sb.toString();
+
+        try {
+            DanhMuc updatedDanhMuc = gson.fromJson(jsonRequest, DanhMuc.class);
+            if (updatedDanhMuc == null || updatedDanhMuc.getTen_danh_muc() == null) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid category data\"}");
+                 return;
+            }
+            
+            // Kiểm tra xem danh mục có thuộc về người dùng đang đăng nhập không
+            // Có thể cần thêm phương thức getDanhMucById trong QuanLyChiTieuService để kiểm tra user id
+            // Hoặc đảm bảo logic update trong DAO kiểm tra id_nguoidung
+
+            updatedDanhMuc.setId_danhmuc(categoryId);
+            updatedDanhMuc.setId_nguoidung(userId); // Đảm bảo userId đúng
+
+            boolean success = service.updateDanhMuc(updatedDanhMuc);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write("{\"message\": \"Category updated successfully\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND); // Hoặc SC_FORBIDDEN nếu không thuộc về user
+                 response.getWriter().write("{\"error\": \"Category not found or update failed\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handleDeleteCategories(HttpServletRequest request, HttpServletResponse response, int categoryId) throws IOException {
+         // Lấy userId từ request attribute (do AuthFilter đặt)
+        Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (userId == null) { // Should not happen if AuthFilter works correctly
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+            return;
+        }
+
+        // Kiểm tra xem danh mục có thuộc về người dùng đang đăng nhập không
+        DanhMuc categoryToDelete = service.getDanhMucByIdAndUserId(categoryId, userId); // Sử dụng phương thức mới
+
+        if (categoryToDelete == null) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("{\"error\": \"Category not found or does not belong to user\"}");
+            return;
+        }
+
+        try {
+            boolean success = service.deleteDanhMuc(categoryId);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write("{\"message\": \"Category deleted successfully\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Failed to delete category\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+     private void handleGetTransactions(HttpServletRequest request, HttpServletResponse response, String[] pathParts) throws IOException {
+         // Expecting /api/transactions/user/{userId}/month/{month}/year/{year}
+         if (pathParts.length > 5 && "user".equals(pathParts[2]) && "month".equals(pathParts[4]) && "year".equals(pathParts[6])) {
+             try {
+                 int requestedUserId = Integer.parseInt(pathParts[3]);
+                 int month = Integer.parseInt(pathParts[5]);
+                 int year = Integer.parseInt(pathParts[7]);
+
+                 // Lấy userId từ request attribute (do AuthFilter đặt)
+                 Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+
+                 if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
+                     // Người dùng yêu cầu giao dịch của người khác hoặc không xác thực
+                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                     response.getWriter().write("{\"error\": \"Forbidden - Cannot access other users' transactions\"}");
+                     return;
+                 }
+
+                 List<GiaoDich> transactions = service.getGiaoDichByMonth(requestedUserId, month, year);
+                 response.setStatus(HttpServletResponse.SC_OK);
+                 response.getWriter().write(gson.toJson(transactions));
+             } catch (NumberFormatException e) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid user ID, month, or year\"}");
+             } catch (Exception e) {
+                 e.printStackTrace();
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Internal server error\"}");
+             }
+         } else {
+             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+             response.getWriter().write("{\"error\": \"Endpoint not found. Use /api/transactions/user/{userId}/month/{month}/year/{year}\"}");
+         }
+     }
+
+     private void handlePostTransactions(HttpServletRequest request, HttpServletResponse response) throws IOException {
+         // Lấy userId từ request attribute (do AuthFilter đặt)
+         Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+         if (userId == null) { // Should not happen if AuthFilter works correctly
+             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+             response.getWriter().write("{\"error\": \"Unauthorized\"}");
+             return;
+         }
+
+         StringBuilder sb = new StringBuilder();
+         String line;
+         while ((line = request.getReader().readLine()) != null) {
+             sb.append(line);
+         }
+         String jsonRequest = sb.toString();
+
+         try {
+             GiaoDich newGiaoDich = gson.fromJson(jsonRequest, GiaoDich.class);
+             if (newGiaoDich == null || newGiaoDich.getId_danhmuc() == null || newGiaoDich.getId_loai() == null || newGiaoDich.getSo_tien() <= 0) {
+                  response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                  response.getWriter().write("{\"error\": \"Invalid transaction data\"}");
+                  return;
+             }
+
+             newGiaoDich.setId_nguoidung(String.valueOf(userId)); // Gán userId từ token
+             // Đảm bảo ngày, tháng, năm được thiết lập nếu cần (từ request hoặc hệ thống)
+             if (newGiaoDich.getNgay() == null) { // Ví dụ: sử dụng ngày hiện tại nếu không cung cấp
+                 long millis = System.currentTimeMillis();
+                 newGiaoDich.setNgay(new Date(millis));
+                 // Có thể cần trích xuất tháng/năm từ ngày nếu không được gửi riêng
+             }
+             if (newGiaoDich.getThang() == 0 || newGiaoDich.getNam() == 0) {
+                  // Trích xuất tháng/năm từ ngày
+                  java.util.Calendar cal = java.util.Calendar.getInstance();
+                  cal.setTime(newGiaoDich.getNgay());
+                  newGiaoDich.setThang(cal.get(java.util.Calendar.MONTH) + 1); // Tháng trong Calendar từ 0-11
+                  newGiaoDich.setNam(cal.get(java.util.Calendar.YEAR));
+             }
+
+             boolean success = service.addGiaoDich(newGiaoDich);
+
+             if (success) {
+                 response.setStatus(HttpServletResponse.SC_CREATED);
+                 response.getWriter().write("{\"message\": \"Transaction added successfully\"}");
+             } else {
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                  response.getWriter().write("{\"error\": \"Failed to add transaction\"}");
+             }
+         } catch (Exception e) {
+             e.printStackTrace();
+             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+             response.getWriter().write("{\"error\": \"Internal server error\"}");
+         }
+     }
+
+     private void handlePutTransactions(HttpServletRequest request, HttpServletResponse response, int transactionId) throws IOException {
+         // Lấy userId từ request attribute (do AuthFilter đặt)
+         Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+         if (userId == null) { // Should not happen if AuthFilter works correctly
+             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+             response.getWriter().write("{\"error\": \"Unauthorized\"}");
+             return;
+         }
+
+         StringBuilder sb = new StringBuilder();
+         String line;
+         while ((line = request.getReader().readLine()) != null) {
+             sb.append(line);
+         }
+         String jsonRequest = sb.toString();
+
+         try {
+             GiaoDich updatedGiaoDich = gson.fromJson(jsonRequest, GiaoDich.class);
+             if (updatedGiaoDich == null || updatedGiaoDich.getId_danhmuc() == null || updatedGiaoDich.getId_loai() == null || updatedGiaoDich.getSo_tien() <= 0) {
+                  response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                  response.getWriter().write("{\"error\": \"Invalid transaction data\"}");
+                  return;
+             }
+
+             updatedGiaoDich.setId_GD(String.valueOf(transactionId));
+             updatedGiaoDich.setId_nguoidung(String.valueOf(userId)); // Đảm bảo userId đúng
+             // Cập nhật tháng/năm nếu ngày được cung cấp
+              if (updatedGiaoDich.getNgay() != null) {
+                  java.util.Calendar cal = java.util.Calendar.getInstance();
+                  cal.setTime(updatedGiaoDich.getNgay());
+                  updatedGiaoDich.setThang(cal.get(java.util.Calendar.MONTH) + 1);
+                  updatedGiaoDich.setNam(cal.get(java.util.Calendar.YEAR));
+              }
+
+             boolean success = service.updateGiaoDich(updatedGiaoDich);
+
+             if (success) {
+                 response.setStatus(HttpServletResponse.SC_OK);
+                 response.getWriter().write("{\"message\": \"Transaction updated successfully\"}");
+             } else {
+                 response.setStatus(HttpServletResponse.SC_NOT_FOUND); // Hoặc SC_FORBIDDEN nếu không thuộc về user
+                  response.getWriter().write("{\"error\": \"Transaction not found or update failed\"}");
+             }
+         } catch (Exception e) {
+             e.printStackTrace();
+             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+             response.getWriter().write("{\"error\": \"Internal server error\"}");
+         }
+     }
+
+     private void handleDeleteTransactions(HttpServletRequest request, HttpServletResponse response, int transactionId) throws IOException {
+         // Lấy userId từ request attribute (do AuthFilter đặt)
+         Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+         if (userId == null) { // Should not happen if AuthFilter works correctly
+             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+             response.getWriter().write("{\"error\": \"Unauthorized\"}");
+             return;
+         }
+
+         // Kiểm tra xem giao dịch có thuộc về người dùng đang đăng nhập không trước khi xóa
+         GiaoDich transactionToDelete = service.getGiaoDichByIdAndUserId(transactionId, userId); // Sử dụng phương thức mới
+
+         if (transactionToDelete == null) {
+             response.setStatus(HttpServletResponse.SC_NOT_FOUND); // Sửa lỗi chính tả ở đây
+             response.getWriter().write("{\"error\": \"Transaction not found or does not belong to user\"}");
+             return;
+         }
+
+         try {
+             boolean success = service.deleteGiaoDich(transactionId);
+
+             if (success) {
+                 response.setStatus(HttpServletResponse.SC_OK);
+                 response.getWriter().write("{\"message\": \"Transaction deleted successfully\"}");
+             } else {
+                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Failed to delete transaction\"}");
+             }
+         } catch (Exception e) {
+             e.printStackTrace();
+             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+             response.getWriter().write("{\"error\": \"Internal server error\"}");
+         }
+     }
+
+    private void handleLogin(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // Đọc dữ liệu JSON từ request body
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = request.getReader().readLine()) != null) {
+            sb.append(line);
+        }
+        String jsonRequest = sb.toString();
+
+        System.out.println("Received JSON Request Body: " + jsonRequest); // Giữ lại debug log
+
+        LoginRequest loginRequest = null; // Khởi tạo null
+        try {
+            // Cố gắng chuyển đổi JSON thành đối tượng LoginRequest
+            loginRequest = gson.fromJson(jsonRequest, LoginRequest.class);
+
+        } catch (JsonSyntaxException e) {
+            // Bắt ngoại lệ nếu JSON không hợp lệ
+             System.err.println("Json Syntax Error during login parsing: " + e.getMessage());
+             response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+             response.getWriter().write("{\"error\": \"Invalid JSON format\"}");
+             return; // Thoát khỏi phương thức
+        } catch (Exception e) {
+             // Bắt các lỗi khác trong quá trình đọc/parse
+             e.printStackTrace();
+             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+             response.getWriter().write("{\"error\": \"Internal server error during JSON parsing\"}");
+             return; // Thoát khỏi phương thức
+        }
+
+
+        // --- DEBUG LOG ---
+        System.out.println("LoginRequest object after gson.fromJson: " + loginRequest);
+        if (loginRequest != null) {
+             System.out.println("Email: " + (loginRequest.email != null ? loginRequest.email : "null") + ", Password: " + (loginRequest.password != null ? "masked" : "null")); // Log password cẩn thận
+        }
+        // -----------------
+
+
+        // Kiểm tra xem loginRequest có null không hoặc các trường cần thiết có null không
+        if (loginRequest == null || loginRequest.email == null || loginRequest.password == null) {
+             response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+             response.getWriter().write("{\"error\": \"Missing email or password\"}");
+             return; // Thoát khỏi phương thức
+        }
+
+        try {
+            // Nếu đến được đây, loginRequest và các trường không null
+            LoginResponse loginResponse = service.login(loginRequest.email, loginRequest.password); // Dòng này bây giờ an toàn hơn
+
+            if (loginResponse != null) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write(gson.toJson(loginResponse));
+            } else {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized cho thông tin đăng nhập sai
+                response.getWriter().write("{\"error\": \"Invalid credentials\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}"); // Lỗi server trong logic service
+        }
+    }
+    
+    private void handleRegister(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // Đọc dữ liệu JSON từ request body
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = request.getReader().readLine()) != null) {
+            sb.append(line);
+        }
+        String jsonRequest = sb.toString();
+
+        try {
+            // Đối tượng NguoiDung có thể được dùng trực tiếp nếu cấu trúc JSON phù hợp
+            NguoiDung newUser = gson.fromJson(jsonRequest, NguoiDung.class);
+
+            if (newUser == null || newUser.getEmail() == null || newUser.getMatkhau() == null) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                 response.getWriter().write("{\"error\": \"Invalid registration data\"}");
+                 return;
+            }
+
+            // Gán role mặc định nếu cần, hoặc client gửi lên role
+            if (newUser.getRole() == null || newUser.getRole().isEmpty()) {
+                newUser.setRole("user"); // Ví dụ gán role mặc định
+            }
+            
+            boolean success = service.register(newUser);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_CREATED);
+                response.getWriter().write("{\"message\": \"User registered successfully\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                 response.getWriter().write("{\"error\": \"Registration failed\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handleGetBudget(HttpServletRequest request, HttpServletResponse response, String[] pathParts) throws IOException {
+        // Expecting /api/budget/user/{userId}/month/{month}/year/{year}
+        if (pathParts.length > 5 && "user".equals(pathParts[2]) && "month".equals(pathParts[4]) && "year".equals(pathParts[6])) {
+            try {
+                int requestedUserId = Integer.parseInt(pathParts[3]);
+                int month = Integer.parseInt(pathParts[5]);
+                int year = Integer.parseInt(pathParts[7]);
+
+                // Lấy userId từ request attribute (do AuthFilter đặt)
+                Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+
+                if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().write("{\"error\": \"Forbidden - Cannot access other users' budget\"}");
+                    return;
+                }
+
+                NganSach budget = service.getNganSachByMonth(requestedUserId, month, year);
+                if (budget != null) {
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    response.getWriter().write(gson.toJson(budget));
+                } else {
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    response.getWriter().write("{\"message\": \"Budget not found for this period\"}");
+                }
+            } catch (NumberFormatException e) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"error\": \"Invalid user ID, month, or year\"}");
+            } catch (Exception e) {
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"error\": \"Internal server error\"}");
+            }
+        } else {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("{\"error\": \"Endpoint not found. Use /api/budget/user/{userId}/month/{month}/year/{year}\"}");
+        }
+    }
+
+    private void handlePostBudget(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (userId == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = request.getReader().readLine()) != null) {
+            sb.append(line);
+        }
+        String jsonRequest = sb.toString();
+
+        try {
+            NganSach newNganSach = gson.fromJson(jsonRequest, NganSach.class);
+            if (newNganSach == null || newNganSach.getNgansach() <= 0 || newNganSach.getThang() <= 0 || newNganSach.getNam() <= 0) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"error\": \"Invalid budget data\"}");
+                return;
+            }
+
+            newNganSach.setId_nguoidung(userId); // Gán userId từ token
+
+            // Kiểm tra xem đã có ngân sách cho tháng/năm này chưa
+            NganSach existingBudget = service.getNganSachByMonth(userId, newNganSach.getThang(), newNganSach.getNam());
+            if (existingBudget != null) {
+                 response.setStatus(HttpServletResponse.SC_CONFLICT); // 409 Conflict
+                 response.getWriter().write("{\"error\": \"Budget already exists for this month and year\"}");
+                 return;
+            }
+
+            boolean success = service.addNganSach(newNganSach);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_CREATED);
+                response.getWriter().write("{\"message\": \"Budget added successfully\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"error\": \"Failed to add budget\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handlePutBudget(HttpServletRequest request, HttpServletResponse response, int budgetId) throws IOException {
+        Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (userId == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = request.getReader().readLine()) != null) {
+            sb.append(line);
+        }
+        String jsonRequest = sb.toString();
+
+        try {
+            NganSach updatedNganSach = gson.fromJson(jsonRequest, NganSach.class);
+            if (updatedNganSach == null || updatedNganSach.getNgansach() <= 0 || updatedNganSach.getThang() <= 0 || updatedNganSach.getNam() <= 0) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"error\": \"Invalid budget data\"}");
+                return;
+            }
+
+            // Kiểm tra xem ngân sách có thuộc về người dùng đang đăng nhập không
+            NganSach existingBudget = service.getNganSachByIdAndUserId(budgetId, userId);
+            if (existingBudget == null) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                response.getWriter().write("{\"error\": \"Budget not found or does not belong to user\"}");
+                return;
+            }
+            
+            updatedNganSach.setId_ngansach(budgetId); // Gán ID từ URL
+            updatedNganSach.setId_nguoidung(userId); // Đảm bảo userId đúng
+
+            boolean success = service.updateNganSach(updatedNganSach);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write("{\"message\": \"Budget updated successfully\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"error\": \"Failed to update budget\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handleDeleteBudget(HttpServletRequest request, HttpServletResponse response, int budgetId) throws IOException {
+        Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (userId == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+            return;
+        }
+
+        // Kiểm tra xem ngân sách có thuộc về người dùng đang đăng nhập không trước khi xóa
+        NganSach budgetToDelete = service.getNganSachByIdAndUserId(budgetId, userId);
+
+        if (budgetToDelete == null) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("{\"error\": \"Budget not found or does not belong to user\"}");
+            return;
+        }
+
+        try {
+            boolean success = service.deleteNganSach(budgetId);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write("{\"message\": \"Budget deleted successfully\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"error\": \"Failed to delete budget\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handleGetIcons(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            List<model.Icon> icons = service.getAllIcon();
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().write(gson.toJson(icons));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handleGetColors(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            List<model.MauSac> colors = service.getAllMauSac();
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().write(gson.toJson(colors));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handleGetTransactionTypes(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            List<model.LoaiGiaoDich> transactionTypes = service.getAllLoaiGiaoDich();
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().write(gson.toJson(transactionTypes));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handlePutUser(HttpServletRequest request, HttpServletResponse response, int requestedUserId) throws IOException {
+        Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // Cannot update other users' profiles
+            response.getWriter().write("{\"error\": \"Forbidden - Cannot update other users' profile\"}");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = request.getReader().readLine()) != null) {
+            sb.append(line);
+        }
+        String jsonRequest = sb.toString();
+
+        try {
+            NguoiDung updatedUser = gson.fromJson(jsonRequest, NguoiDung.class);
+            if (updatedUser == null) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"error\": \"Invalid user data\"}");
+                return;
+            }
+
+            updatedUser.setId_nguoidung(requestedUserId); // Đảm bảo ID người dùng đúng từ URL
+
+            // TODO: Thêm logic xử lý cập nhật mật khẩu nếu có trong request body
+            // Hiện tại, mật khẩu trong request body sẽ ghi đè lên mật khẩu cũ (nếu có), cần xử lý mã hóa
+            // Tốt nhất là có một endpoint riêng để đổi mật khẩu hoặc xử lý cẩn thận ở đây.
+            
+            boolean success = service.updateUser(updatedUser);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write("{\"message\": \"User updated successfully\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"error\": \"Failed to update user\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handleGetUserById(HttpServletRequest request, HttpServletResponse response, int requestedUserId) throws IOException {
+        Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // Cannot access other users' profiles
+            response.getWriter().write("{\"error\": \"Forbidden - Cannot access other users' profile\"}");
+            return;
+        }
+
+        try {
+            NguoiDung user = service.getUserById(requestedUserId);
+            if (user != null) {
+                 // Lưu ý: Không trả về mật khẩu trong response
+                 user.setMatkhau(null); // Xóa mật khẩu trước khi gửi về client
+                 response.setStatus(HttpServletResponse.SC_OK);
+                 response.getWriter().write(gson.toJson(user));
+            } else {
+                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                 response.getWriter().write("{\"error\": \"User not found\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    private void handleChangePassword(HttpServletRequest request, HttpServletResponse response, int requestedUserId) throws IOException {
+        Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // Cannot change other users' passwords
+            response.getWriter().write("{\"error\": \"Forbidden - Cannot change other users' password\"}");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = request.getReader().readLine()) != null) {
+            sb.append(line);
+        }
+        String jsonRequest = sb.toString();
+
+        ChangePasswordRequest changePasswordRequest = null;
+        try {
+             // Sử dụng lớp ChangePasswordRequest độc lập đã định nghĩa bên ngoài
+            changePasswordRequest = gson.fromJson(jsonRequest, ChangePasswordRequest.class);
+
+        } catch (JsonSyntaxException e) {
+             System.err.println("Json Syntax Error during change password parsing: " + e.getMessage());
+             response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+             response.getWriter().write("{\"error\": \"Invalid JSON format for password change\"}");
+             return; // Thoát khỏi phương thức
+        } catch (Exception e) {
+             e.printStackTrace();
+             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+             response.getWriter().write("{\"error\": \"Internal server error during JSON parsing\"}");
+             return; // Thoát khỏi phương thức
+        }
+
+
+        if (changePasswordRequest == null || changePasswordRequest.oldPassword == null || changePasswordRequest.newPassword == null) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write("{\"error\": \"Missing old or new password\"}");
+            return;
+        }
+
+        try {
+            boolean success = service.changePassword(requestedUserId, changePasswordRequest.oldPassword, changePasswordRequest.newPassword);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write("{\"message\": \"Password changed successfully\"}");
+            } else {
+                // Có thể là mật khẩu cũ sai hoặc lỗi server
+                // Trả về 401 Bad Request hoặc 401 Unauthorized nếu do mật khẩu cũ sai
+                // Để đơn giản, tạm thời trả về 401 nếu không thành công.
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+                response.getWriter().write("{\"error\": \"Failed to change password. Check old password.\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}"); // Lỗi server trong logic service
+        }
+    }
+
+    private void handleSearchTransactions(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (userId == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+            return;
+        }
+
+        String keyword = request.getParameter("keyword");
+        if (keyword == null || keyword.trim().isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write("{\"error\": \"Missing or empty keyword parameter\"}");
+            return;
+        }
+
+        try {
+            List<model.GiaoDich> searchResults = service.searchTransactionsByKeyword(userId, keyword);
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().write(gson.toJson(searchResults));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\": \"Internal server error\"}");
+        }
+    }
+
+    // Thêm các phương thức doGet, doPut, doDelete cho các loại request khác nếu cần
+} 
