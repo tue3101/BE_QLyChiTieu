@@ -110,6 +110,11 @@ public class QuanLyChiTieuService {
         return null;
     }
     
+    // Phương thức mới để lấy danh mục theo ID (không kiểm tra người dùng sở hữu)
+    public DanhMuc getDanhMucById(int categoryId) {
+        return danhMucDAO.getById(categoryId);
+    }
+    
     // Phương thức mới để lấy tất cả danh mục mặc định
     public List<DanhMuc> getAllDefaultCategories() {
         return danhMucDAO.getAllDefaultCategories();
@@ -348,5 +353,38 @@ public class QuanLyChiTieuService {
     // Phương thức mới để xóa người dùng (dành cho admin)
     public boolean deleteUser(int userId) {
         return nguoiDungDAO.delete(userId);
+    }
+
+    // Phương thức tìm kiếm người dùng theo tên (dành cho admin)
+    public List<NguoiDung> searchUsersByName(String nameQuery) {
+        List<NguoiDung> users = nguoiDungDAO.searchByName(nameQuery);
+        // Đảm bảo không trả về mật khẩu
+        for (NguoiDung user : users) {
+            user.setMatkhau(null);
+        }
+        return users;
+    }
+
+    // Phương thức tìm kiếm danh mục theo tên cho người dùng hoặc admin
+    public List<DanhMuc> searchCategoriesByName(String nameQuery, NguoiDung currentUser) {
+        System.out.println("DEBUG: Service nhận nameQuery: " + nameQuery + ", user: " + (currentUser != null ? currentUser.getEmail() : "null"));
+        if ("admin".equals(currentUser.getRole())) {
+            // Admin tìm kiếm tất cả danh mục
+            return danhMucDAO.searchByNameAndUserId(nameQuery, null);
+        } else {
+            // Người dùng thường chỉ tìm kiếm danh mục của họ hoặc mặc định
+            return danhMucDAO.searchByNameAndUserId(nameQuery, currentUser.getId_nguoidung());
+        }
+    }
+
+    // Phương thức tìm kiếm icon theo tên
+    public List<Icon> searchIconsByName(String nameQuery) {
+        return iconDAO.searchByName(nameQuery);
+    }
+
+    // Phương thức tìm kiếm màu sắc theo tên
+    public List<MauSac> searchColorsByName(String nameQuery) {
+        System.out.println("DEBUG: Received nameQuery in Service: " + nameQuery);
+        return mauSacDAO.searchByName(nameQuery);
     }
 } 

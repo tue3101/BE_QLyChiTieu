@@ -94,4 +94,27 @@ public class MauSacDAO implements DAO<MauSac> {
         }
         return false;
     }
+
+    // Phương thức tìm kiếm màu sắc theo tên 
+    public List<MauSac> searchByName(String nameQuery) {
+        List<MauSac> list = new ArrayList<>();
+        String sql = "SELECT * FROM mausac WHERE ten_mau LIKE ?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            System.out.println("DEBUG: Received nameQuery in DAO: " + nameQuery);
+            System.out.println("DEBUG: SQL query: " + sql);
+            ps.setString(1, "%" + nameQuery + "%"); // Tìm kiếm chuỗi con
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                MauSac ms = new MauSac();
+                ms.setId_mau(rs.getInt("id_mau"));
+                ms.setMa_mau(rs.getString("ma_mau"));
+                ms.setTen_mau(rs.getString("ten_mau"));
+                list.add(ms);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 } 

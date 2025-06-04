@@ -94,4 +94,25 @@ public class IconDAO implements DAO<Icon> {
         }
         return false;
     }
+
+    // Phương thức tìm kiếm icon theo tên 
+    public List<Icon> searchByName(String nameQuery) {
+        List<Icon> list = new ArrayList<>();
+        String sql = "SELECT * FROM icon WHERE ten_icon LIKE ?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, "%" + nameQuery + "%"); // Tìm kiếm chuỗi con
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                Icon icon = new Icon();
+                icon.setId_icon(rs.getInt("id_icon"));
+                icon.setTen_icon(rs.getString("ten_icon"));
+                icon.setMa_icon(rs.getString("ma_icon"));
+                list.add(icon);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 } 
