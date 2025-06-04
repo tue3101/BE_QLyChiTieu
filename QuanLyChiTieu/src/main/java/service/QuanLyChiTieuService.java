@@ -325,4 +325,28 @@ public class QuanLyChiTieuService {
         }
         return users;
     }
+
+    // Phương thức mới để admin thêm người dùng (có thể thiết lập role ban đầu)
+    public boolean adminAddUser(NguoiDung nguoiDung) {
+        // Kiểm tra email đã tồn tại chưa
+        if (nguoiDungDAO.isEmailExists(nguoiDung.getEmail())) {
+            return false; // Email đã tồn tại
+        }
+
+        // Mật khẩu cần được thiết lập trước khi gọi DAO (sẽ được hash trong DAO add method)
+        if (nguoiDung.getMatkhau() == null || nguoiDung.getMatkhau().isEmpty()) {
+             // Có thể tạo mật khẩu mặc định hoặc yêu cầu mật khẩu khi admin thêm
+             // Tạm thời yêu cầu mật khẩu phải được cung cấp trong request
+             System.err.println("Password must be provided when admin adds user.");
+             return false; // Hoặc throw exception
+        }
+
+        // Thêm vào DB (DAO sẽ băm mật khẩu)
+        return nguoiDungDAO.add(nguoiDung);
+    }
+
+    // Phương thức mới để xóa người dùng (dành cho admin)
+    public boolean deleteUser(int userId) {
+        return nguoiDungDAO.delete(userId);
+    }
 } 
