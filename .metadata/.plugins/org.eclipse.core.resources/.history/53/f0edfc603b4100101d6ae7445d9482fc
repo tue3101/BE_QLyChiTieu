@@ -530,13 +530,13 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             if (updatingUser != null && "admin".equals(updatingUser.getRole())) {
                 // Nếu người dùng là admin, đặt id_nguoidung là null khi cập nhật
                 updatedDanhMuc.setId_nguoidung(null); // Sử dụng null cho danh mục mặc định
-            } else { // Nếu không phải admin (người dùng bình thường), đảm bảo id_nguoidung không bị thay đổi (giữ nguyên của user)
+            } else {\n                // Nếu không phải admin (người dùng bình thường), đảm bảo id_nguoidung không bị thay đổi (giữ nguyên của user)
                 // Hoặc bạn có thể kiểm tra xem danh mục này có thuộc về user đó không trước khi cho phép cập nhật
                 // Logic kiểm tra quyền sở hữu danh mục đã có trong handleDeleteCategories, có thể áp dụng tương tự ở đây
                  DanhMuc existingCategory = service.getDanhMucByIdAndUserId(categoryId, userId);
                  if (existingCategory == null) {
                       response.setStatus(HttpServletResponse.SC_FORBIDDEN); // Hoặc SC_NOT_FOUND
-                      response.getWriter().write("{\"error\": \"Category not found or does not belong to user\"}");
+                      response.getWriter().write("{"error": "Category not found or does not belong to user"}");
                       return;
                  }
                 // Giữ nguyên id_nguoidung của danh mục gốc hoặc set lại userId nếu cần cập nhật data khác
