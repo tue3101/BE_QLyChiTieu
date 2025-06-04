@@ -224,6 +224,8 @@ public class QuanLyChiTieuServlet extends HttpServlet {
              handlePostColors(request, response);
          } else if ("logout".equals(endpoint)) {
              handleLogout(request, response);
+         } else if ("admin-add-user".equals(endpoint)) {
+             handleAdminAddUser(request, response);
          } else {
              response.setStatus(HttpServletResponse.SC_NOT_FOUND);
              response.getWriter().write("{\"error\": \"Endpoint not found\"}");
@@ -427,7 +429,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
                      handleChangePassword(request, response, userId);
                  } else {
                      // Handle update user info
-                      handlePutUser(request, response, userId);
+                      handleDeleteUser(request, response, userId);
                  }
              } catch (NumberFormatException e) {
                  response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -1111,7 +1113,17 @@ public class QuanLyChiTieuServlet extends HttpServlet {
     private void handlePutUser(HttpServletRequest request, HttpServletResponse response, int requestedUserId) throws IOException {
         System.out.println("Inside handlePutUser for user ID: " + requestedUserId);
         Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
-        if (authenticatedUserId == null || !authenticatedUserId.equals(requestedUserId)) {
+        if (authenticatedUserId == null) { // Should not happen if AuthFilter works correctly
+             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+             response.getWriter().write("{\"error\": \"Unauthorized\"}");
+             return;
+        }
+
+        // Get the requesting user to check their role
+        NguoiDung requestingUser = service.getUserById(authenticatedUserId);
+
+        // Allow admin to update any user, but non-admin users can only update themselves
+        if (requestingUser == null || (!"admin".equals(requestingUser.getRole()) && !authenticatedUserId.equals(requestedUserId))) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
             response.getWriter().write("{\"error\": \"You are not authorized to update this user\"}");
             return;
@@ -1484,5 +1496,97 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write("{\"error\": \"Internal server error\"}");
         }
+    }
+
+    private void handleAdminAddUser(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (authenticatedUserId == null) { // Should not happen if AuthFilter works correctly
+             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+             response.getWriter().write("{\"error\": \"Unauthorized\"}");
+             return;
+        }
+
+        NguoiDung requestingUser = service.getUserById(authenticatedUserId);
+
+        if (requestingUser == null || !"admin".equals(requestingUser.getRole())) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
+            response.getWriter().write("{\"error\": \"Forbidden - Only admin can add users\"}");
+            return;
+        }
+
+        NguoiDung newUser = null;
+        try {
+            // Đọc trực tiếp từ request reader vào Gson
+            newUser = gson.fromJson(request.getReader(), NguoiDung.class);
+
+            // Kiểm tra dữ liệu cần thiết
+            if (newUser == null || newUser.getEmail() == null || newUser.getEmail().isEmpty() || newUser.getMatkhau() == null || newUser.getMatkhau().isEmpty() || newUser.getHoten() == null || newUser.getHoten().isEmpty() || newUser.getRole() == null || newUser.getRole().isEmpty()) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+                response.getWriter().write("{\"error\": \"Missing required user data (email, password, hoten, role)\"}");
+                return;
+            }
+
+            // Validate role value (ensure it's either 'user' or 'admin')
+            if (!"user".equals(newUser.getRole()) && !"admin".equals(newUser.getRole())) {
+                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+                 response.getWriter().write("{\"error\": \"Invalid role value. Must be 'user' or 'admin'.\"}");
+                 return;
+            }
+
+            boolean success = service.adminAddUser(newUser);
+
+            if (success) {
+                response.setStatus(HttpServletResponse.SC_CREATED); // 201 Created
+                response.getWriter().write("{\"message\": \"User added successfully by admin\"}");
+            } else {
+                // Service.adminAddUser trả về false nếu email đã tồn tại
+                response.setStatus(HttpServletResponse.SC_CONFLICT); // 409 Conflict
+                response.getWriter().write("{\"error\": \"Failed to add user - Email may already exist\"}");
+            }
+        } catch (JsonSyntaxException e) {
+             System.err.println("Json Syntax Error during admin add user parsing: " + e.getMessage());
+             response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+             response.getWriter().write("{\"error\": \"Invalid JSON format\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            response.getWriter().write("{\"error\": \"An error occurred while adding user\"}");
+        }
+    }
+
+    // Phương thức mới để xử lý yêu cầu xóa người dùng (chỉ admin)
+    private void handleDeleteUser(HttpServletRequest request, HttpServletResponse response, int requestedUserId) throws IOException {
+         Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+         if (authenticatedUserId == null) { // Should not happen if AuthFilter works correctly
+              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+              response.getWriter().write("{\"error\": \"Unauthorized\"}");
+              return;
+         }
+
+         // Get the requesting user to check their role
+         NguoiDung requestingUser = service.getUserById(authenticatedUserId);
+
+         // Only admin can delete users, and admin cannot delete their own account
+         if (requestingUser == null || !"admin".equals(requestingUser.getRole()) || authenticatedUserId.equals(requestedUserId)) {
+             response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
+             response.getWriter().write("{\"error\": \"You are not authorized to delete this user or cannot delete your own account\"}");
+             return;
+         }
+
+         try {
+             boolean success = service.deleteUser(requestedUserId); // <-- Call service to delete user
+
+             if (success) {
+                 response.setStatus(HttpServletResponse.SC_OK); // 200 OK
+                 response.getWriter().write("{\"message\": \"User deleted successfully\"}");
+             } else {
+                 response.setStatus(HttpServletResponse.SC_NOT_FOUND); // Hoặc SC_INTERNAL_SERVER_ERROR nếu lỗi khác
+                 response.getWriter().write("{\"error\": \"Failed to delete user or user not found\"}");
+             }
+         } catch (Exception e) {
+             e.printStackTrace();
+             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+             response.getWriter().write("{\"error\": \"An error occurred while deleting user\"}");
+         }
     }
 } 
