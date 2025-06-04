@@ -131,6 +131,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        System.out.println("DEBUG: Received GET request to path: " + request.getPathInfo());
         setCorsHeaders(request, response); // Also add headers to actual responses
         String pathInfo = request.getPathInfo();
         response.setContentType("application/json");
@@ -145,7 +146,10 @@ public class QuanLyChiTieuServlet extends HttpServlet {
         String[] pathParts = pathInfo.split("/");
         String resource = pathParts.length > 1 ? pathParts[1] : null;
 
-        if ("categories".equals(resource)) {
+        // Đặt kiểm tra /api/categories/search lên trước điều kiện /api/categories chung
+        if ("categories".equals(resource) && pathParts.length > 2 && "search".equals(pathParts[2])) {
+             handleSearchCategories(request, response);
+        } else if ("categories".equals(resource)) {
             handleGetCategories(request, response, pathParts);
         } else if ("transactions".equals(resource)) {
         	// Đặt kiểm tra /api/transactions/search lên trước các đường dẫn transactions khác
@@ -156,14 +160,17 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             }
         } else if ("budget".equals(resource)) {
              handleGetBudget(request, response, pathParts);
-        } else if ("icons".equals(resource)) {
-             handleGetIcons(request, response);
+        // Đặt kiểm tra /api/colors/search lên trước điều kiện /api/colors chung
+        } else if ("colors".equals(resource) && pathParts.length > 2 && "search".equals(pathParts[2])) {
+             handleSearchColors(request, response);
         } else if ("colors".equals(resource)) {
              handleGetColors(request, response);
+        } else if ("icons".equals(resource)) {
+             handleGetIcons(request, response);
         } else if ("transaction-types".equals(resource)) {
              handleGetTransactionTypes(request, response);
-        } else if ("users".equals(resource) && pathParts.length > 2) {
-             // Expecting /api/users/{id} hoặc /api/users/{id}/icons/{id} or /api/users/{id}/colors/{id} or /api/users/{id}/password
+        } else if ("users".equals(resource) && pathParts.length > 2 && !"search".equals(pathParts[2])) { // Thêm điều kiện không phải search
+             // Expecting /api/users/{id} hoặc /api/users/{id}/password
              try {
                  int userId = Integer.parseInt(pathParts[2]);
                  if (pathParts.length > 3 && "password".equals(pathParts[3])) {
@@ -185,6 +192,12 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             handleGetDefaultCategories(request, response);
         } else if ("users".equals(resource) && pathParts.length == 2) {
             handleGetAllUsers(request, response);
+        } else if ("users".equals(resource) && pathParts.length > 2 && "search".equals(pathParts[2])) {
+             handleSearchUsers(request, response);
+        } else if ("categories".equals(resource) && pathParts.length > 2 && "search".equals(pathParts[2])) {
+             handleSearchCategories(request, response);
+        } else if ("icons".equals(resource) && pathParts.length > 2 && "search".equals(pathParts[2])) {
+             handleSearchIcons(request, response);
         } else {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             response.getWriter().write("{\"error\": \"Endpoint not found\"}");
@@ -590,7 +603,6 @@ public class QuanLyChiTieuServlet extends HttpServlet {
     }
 
     private void handleDeleteCategories(HttpServletRequest request, HttpServletResponse response, int categoryId) throws IOException {
-         // Lấy userId từ request attribute (do AuthFilter đặt)
         Integer userId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
         if (userId == null) { // Should not happen if AuthFilter works correctly
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -598,8 +610,18 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             return;
         }
 
-        // Kiểm tra xem danh mục có thuộc về người dùng đang đăng nhập không
-        DanhMuc categoryToDelete = service.getDanhMucByIdAndUserId(categoryId, userId); // Sử dụng phương thức mới
+        // Get the requesting user to check their role
+        NguoiDung requestingUser = service.getUserById(userId);
+
+        // If the user is admin, allow them to delete any category. Otherwise, check ownership.
+        DanhMuc categoryToDelete = null;
+        if (requestingUser != null && "admin".equals(requestingUser.getRole())) {
+            // Admin can delete any category - just check if it exists
+            categoryToDelete = service.getDanhMucById(categoryId); // Need a service method to get category by ID only
+        } else {
+            // Non-admin users can only delete their own categories
+            categoryToDelete = service.getDanhMucByIdAndUserId(categoryId, userId); // Existing check
+        }
 
         if (categoryToDelete == null) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
@@ -615,7 +637,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
                 response.getWriter().write("{\"message\": \"Category deleted successfully\"}");
             } else {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                 response.getWriter().write("{\"error\": \"Failed to delete category\"}");
+                response.getWriter().write("{\"error\": \"Failed to delete category\"}");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -1588,5 +1610,143 @@ public class QuanLyChiTieuServlet extends HttpServlet {
              response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
              response.getWriter().write("{\"error\": \"An error occurred while deleting user\"}");
          }
+    }
+
+    // --- Phương thức xử lý tìm kiếm người dùng theo tên (Chỉ admin) ---
+    private void handleSearchUsers(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (authenticatedUserId == null) { // Should not happen if AuthFilter works correctly
+             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+             response.getWriter().write("{\"error\": \"Unauthorized\"}");
+             return;
+        }
+
+        NguoiDung requestingUser = service.getUserById(authenticatedUserId);
+
+        if (requestingUser == null || !"admin".equals(requestingUser.getRole())) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
+            response.getWriter().write("{\"error\": \"Forbidden - Only admin can search users\"}");
+            return;
+        }
+
+        String nameQuery = request.getParameter("name");
+        if (nameQuery == null || nameQuery.trim().isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+            response.getWriter().write("{\"error\": \"Missing 'name' parameter\"}");
+            return;
+        }
+
+        try {
+            List<NguoiDung> users = service.searchUsersByName(nameQuery.trim()); // Service đã set mật khẩu = null
+            response.setStatus(HttpServletResponse.SC_OK); // 200 OK
+            response.getWriter().write(gson.toJson(users));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            response.getWriter().write("{\"error\": \"An error occurred while searching users\"}");
+        }
+    }
+
+    // --- Phương thức xử lý tìm kiếm danh mục theo tên (Cho người dùng và admin) ---
+    private void handleSearchCategories(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String keyword = request.getParameter("name"); // hoặc "query" tùy frontend
+        System.out.println("DEBUG: Searching categories with query: " + keyword);
+
+        if (keyword == null || keyword.trim().isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write("{\"error\": \"Missing 'name' parameter\"}");
+            return;
+        }
+
+        Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+        if (authenticatedUserId == null) { // Should not happen if AuthFilter works correctly
+             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+             response.getWriter().write("{\"error\": \"Unauthorized\"}");
+             return;
+        }
+
+        NguoiDung requestingUser = service.getUserById(authenticatedUserId);
+        if (requestingUser == null) { // User not found after auth, should not happen
+             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+             response.getWriter().write("{\"error\": \"Unauthorized\"}");
+             return;
+        }
+
+        try {
+            List<DanhMuc> categories = service.searchCategoriesByName(keyword.trim(), requestingUser);
+            response.setStatus(HttpServletResponse.SC_OK); // 200 OK
+            response.getWriter().write(gson.toJson(categories));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            response.getWriter().write("{\"error\": \"An error occurred while searching categories\"}");
+        }
+    }
+
+    // --- Phương thức xử lý tìm kiếm icon theo tên ---
+    private void handleSearchIcons(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String nameQuery = request.getParameter("name");
+        if (nameQuery == null || nameQuery.trim().isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+            response.getWriter().write("{\"error\": \"Missing 'name' parameter\"}");
+            return;
+        }
+
+        try {
+            List<Icon> icons = service.searchIconsByName(nameQuery.trim());
+            response.setStatus(HttpServletResponse.SC_OK); // 200 OK
+            response.getWriter().write(gson.toJson(icons));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            response.getWriter().write("{\"error\": \"An error occurred while searching icons\"}");
+        }
+    }
+
+    // --- Phương thức xử lý tìm kiếm màu sắc theo tên ---
+    private void handleSearchColors(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String nameQuery = null;
+        
+        // Thử lấy từ query parameter trước
+        nameQuery = request.getParameter("name");
+        
+        // Nếu không có trong query parameter, thử đọc từ body
+        if (nameQuery == null || nameQuery.trim().isEmpty()) {
+            try {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = request.getReader().readLine()) != null) {
+                    sb.append(line);
+                }
+                String jsonBody = sb.toString();
+                if (!jsonBody.isEmpty()) {
+                    // Parse JSON body để lấy tham số name
+                    com.google.gson.JsonObject jsonObject = gson.fromJson(jsonBody, com.google.gson.JsonObject.class);
+                    if (jsonObject.has("name")) {
+                        nameQuery = jsonObject.get("name").getAsString();
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error reading request body: " + e.getMessage());
+            }
+        }
+
+        System.out.println("DEBUG: Received nameQuery in Servlet: " + nameQuery);
+
+        if (nameQuery == null || nameQuery.trim().isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+            response.getWriter().write("{\"error\": \"Missing 'name' parameter in query or request body\"}");
+            return;
+        }
+
+        try {
+            List<MauSac> colors = service.searchColorsByName(nameQuery.trim());
+            response.setStatus(HttpServletResponse.SC_OK); // 200 OK
+            response.getWriter().write(gson.toJson(colors));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
+            response.getWriter().write("{\"error\": \"An error occurred while searching colors\"}");
+        }
     }
 } 

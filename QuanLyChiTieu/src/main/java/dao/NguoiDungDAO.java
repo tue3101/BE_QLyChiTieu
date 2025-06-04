@@ -175,4 +175,27 @@ public class NguoiDungDAO implements DAO<NguoiDung> {
             return false; // Giả định lỗi truy vấn nghĩa là không tìm thấy (hoặc xử lý lỗi khác)
         }
     }
+
+    // Phương thức tìm kiếm người dùng theo tên 
+    public List<NguoiDung> searchByName(String nameQuery) {
+        List<NguoiDung> list = new ArrayList<>();
+        String sql = "SELECT * FROM nguoidung WHERE hoten LIKE ?";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, "%" + nameQuery + "%"); // Tìm kiếm chuỗi con
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                NguoiDung nd = new NguoiDung();
+                nd.setId_nguoidung(rs.getInt("id_nguoidung"));
+                nd.setHoten(rs.getString("hoten"));
+                nd.setEmail(rs.getString("email"));
+                nd.setMatkhau(rs.getString("matkhau")); // Có thể cân nhắc không lấy mật khẩu ở đây
+                nd.setRole(rs.getString("role"));
+                list.add(nd);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 } 
