@@ -109,9 +109,29 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             return LocalDate.parse(in.nextString(), formatter);
         }
     }
+    
+    // Add CORS headers before handling any request
+    @Override
+    protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        setCorsHeaders(request, response);
+        response.setStatus(HttpServletResponse.SC_OK);
+    }
+
+    private void setCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
+        // Read the Origin header from the request and set it in the response
+        String origin = request.getHeader("Origin");
+        if (origin != null && !origin.isEmpty()) {
+            response.setHeader("Access-Control-Allow-Origin", origin);
+        }
+        
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        response.setHeader("Access-Control-Allow-Credentials", "true");
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        setCorsHeaders(request, response); // Also add headers to actual responses
         String pathInfo = request.getPathInfo();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
@@ -173,6 +193,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        setCorsHeaders(request, response); // Add CORS headers
         request.setCharacterEncoding("UTF-8");
         String pathInfo = request.getPathInfo();
         response.setContentType("application/json");
@@ -211,6 +232,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        setCorsHeaders(request, response); // Add CORS headers
         request.setCharacterEncoding("UTF-8");
         String pathInfo = request.getPathInfo();
         response.setContentType("application/json");
@@ -317,6 +339,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        setCorsHeaders(request, response); // Add CORS headers
         String pathInfo = request.getPathInfo();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");

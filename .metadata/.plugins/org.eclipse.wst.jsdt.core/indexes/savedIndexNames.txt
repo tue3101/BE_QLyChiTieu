@@ -1,8 +1,0 @@
-INDEX VERSION 1.4+D:\be_qlchitieu\.metadata\.plugins\org.eclipse.wst.jsdt.core\indexes
-3082680436.index
-1603778832.index
-562890818.index
-3102868857.index
-808810998.index
-1099046138.index
-1030698141.index
