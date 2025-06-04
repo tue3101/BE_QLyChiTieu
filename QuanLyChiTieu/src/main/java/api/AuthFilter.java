@@ -30,6 +30,13 @@ public class AuthFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
+        // Allow CORS preflight requests (OPTIONS method) to pass through
+        if ("OPTIONS".equalsIgnoreCase(httpRequest.getMethod())) {
+            httpResponse.setStatus(HttpServletResponse.SC_OK); // Set status to OK for preflight
+            chain.doFilter(request, response); // Allow the request to continue to the servlet
+            return;
+        }
+
         String path = httpRequest.getRequestURI().substring(httpRequest.getContextPath().length());
 
         // Cho phép truy cập các endpoint login và register mà không cần xác thực
