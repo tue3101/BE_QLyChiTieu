@@ -24,6 +24,7 @@ public class IconDAO implements DAO<Icon> {
                 Icon icon = new Icon();
                 icon.setId_icon(rs.getInt("id_icon"));
                 icon.setTen_icon(rs.getString("ten_icon"));
+                icon.setMa_icon(rs.getString("ma_icon"));
                 list.add(icon);
             }
         } catch (SQLException e) {
@@ -43,6 +44,7 @@ public class IconDAO implements DAO<Icon> {
                 Icon icon = new Icon();
                 icon.setId_icon(rs.getInt("id_icon"));
                 icon.setTen_icon(rs.getString("ten_icon"));
+                icon.setMa_icon(rs.getString("ma_icon"));
                 return icon;
             }
         } catch (SQLException e) {
@@ -53,10 +55,11 @@ public class IconDAO implements DAO<Icon> {
     
     @Override
     public boolean add(Icon icon) {
-        String sql = "INSERT INTO icon(ten_icon) VALUES(?)";
+        String sql = "INSERT INTO icon(ten_icon, ma_icon) VALUES(?,?)";
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, icon.getTen_icon());
+            ps.setString(2, icon.getMa_icon());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -66,11 +69,12 @@ public class IconDAO implements DAO<Icon> {
     
     @Override
     public boolean update(Icon icon) {
-        String sql = "UPDATE icon SET ten_icon=? WHERE id_icon=?";
+        String sql = "UPDATE icon SET ten_icon=?, ma_icon=? WHERE id_icon=?";
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, icon.getTen_icon());
-            ps.setInt(2, icon.getId_icon());
+            ps.setString(2, icon.getMa_icon());
+            ps.setInt(3, icon.getId_icon());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
