@@ -161,10 +161,6 @@ public class QuanLyChiTieuServlet extends HttpServlet {
                  response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                  response.getWriter().write("{\"error\": \"Internal server error\"}");
              }
-        } else if ("default-categories".equals(resource)) {
-            handleGetDefaultCategories(request, response);
-        } else if ("users".equals(resource) && pathParts.length == 2) {
-            handleGetAllUsers(request, response);
         } else {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             response.getWriter().write("{\"error\": \"Endpoint not found\"}");
@@ -523,26 +519,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             }
 
             updatedDanhMuc.setId_danhmuc(categoryId); // Gán categoryId từ URL
-
-            // Lấy thông tin người dùng để kiểm tra role
-            NguoiDung updatingUser = service.getUserById(userId);
-
-            if (updatingUser != null && "admin".equals(updatingUser.getRole())) {
-                // Nếu người dùng là admin, đặt id_nguoidung là null khi cập nhật
-                updatedDanhMuc.setId_nguoidung(null); // Sử dụng null cho danh mục mặc định
-            } else { // Nếu không phải admin (người dùng bình thường), đảm bảo id_nguoidung không bị thay đổi (giữ nguyên của user)
-                // Hoặc bạn có thể kiểm tra xem danh mục này có thuộc về user đó không trước khi cho phép cập nhật
-                // Logic kiểm tra quyền sở hữu danh mục đã có trong handleDeleteCategories, có thể áp dụng tương tự ở đây
-                 DanhMuc existingCategory = service.getDanhMucByIdAndUserId(categoryId, userId);
-                 if (existingCategory == null) {
-                      response.setStatus(HttpServletResponse.SC_FORBIDDEN); // Hoặc SC_NOT_FOUND
-                      response.getWriter().write("{\"error\": \"Category not found or does not belong to user\"}");
-                      return;
-                 }
-                // Giữ nguyên id_nguoidung của danh mục gốc hoặc set lại userId nếu cần cập nhật data khác
-                // updatedDanhMuc.setId_nguoidung(userId); // Dòng này không cần thiết nếu chỉ update data khác và giữ nguyên quyền sở hữu
-                 updatedDanhMuc.setId_nguoidung(existingCategory.getId_nguoidung()); // Giữ nguyên id_nguoidung hiện tại
-            }
+            updatedDanhMuc.setId_nguoidung(userId); // Đảm bảo userId đúng (sử dụng Integer)
 
             boolean success = service.updateDanhMuc(updatedDanhMuc);
 
@@ -1423,43 +1400,4 @@ public class QuanLyChiTieuServlet extends HttpServlet {
     }
 
     // Thêm các phương thức doGet, doPut, doDelete cho các loại request khác nếu cần
-
-    private void handleGetDefaultCategories(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        try {
-            List<DanhMuc> defaultCategories = service.getAllDefaultCategories();
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.getWriter().write(gson.toJson(defaultCategories));
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write("{\"error\": \"Internal server error\"}");
-        }
-    }
-
-    private void handleGetAllUsers(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
-        if (authenticatedUserId == null) { // Should not happen if AuthFilter works correctly
-             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
-             response.getWriter().write("{\"error\": \"Unauthorized\"}");
-             return;
-        }
-
-        NguoiDung requestingUser = service.getUserById(authenticatedUserId);
-
-        if (requestingUser == null || !"admin".equals(requestingUser.getRole())) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Forbidden
-            response.getWriter().write("{\"error\": \"Forbidden - Only admin can access all users\"}");
-            return;
-        }
-
-        try {
-            List<NguoiDung> allUsers = service.getAllUsers(); // Service đã set mật khẩu = null
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.getWriter().write(gson.toJson(allUsers));
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write("{\"error\": \"Internal server error\"}");
-        }
-    }
 } 

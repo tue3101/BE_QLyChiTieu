@@ -110,6 +110,11 @@ public class QuanLyChiTieuService {
         return null;
     }
     
+    // Phương thức mới để lấy tất cả danh mục mặc định
+    public List<DanhMuc> getAllDefaultCategories() {
+        return danhMucDAO.getAllDefaultCategories();
+    }
+    
     // Thêm danh mục mới
     public boolean addDanhMuc(DanhMuc danhMuc) {
         return danhMucDAO.add(danhMuc);
@@ -309,5 +314,15 @@ public class QuanLyChiTieuService {
     // Xóa Màu sắc
     public boolean deleteMauSac(int id) {
         return mauSacDAO.delete(id);
+    }
+
+    // Phương thức mới để lấy tất cả người dùng (dành cho admin)
+    public List<NguoiDung> getAllUsers() {
+        List<NguoiDung> users = nguoiDungDAO.getAll();
+        // Đảm bảo không trả về mật khẩu
+        for (NguoiDung user : users) {
+            user.setMatkhau(null);
+        }
+        return users;
     }
 } 

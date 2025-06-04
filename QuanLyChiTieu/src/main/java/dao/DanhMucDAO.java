@@ -81,7 +81,12 @@ public class DanhMucDAO implements DAO<DanhMuc> {
         String sql = "UPDATE danhmuc SET id_nguoidung=?, id_mau=?, id_icon=?, id_loai=?, ten_danh_muc=? WHERE id_danhmuc=?";
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, dm.getId_nguoidung());
+            // Check if id_nguoidung is null
+            if (dm.getId_nguoidung() == null) {
+                ps.setNull(1, java.sql.Types.INTEGER);
+            } else {
+                ps.setInt(1, dm.getId_nguoidung());
+            }
             ps.setInt(2, dm.getId_mau());
             ps.setInt(3, dm.getId_icon());
             ps.setInt(4, dm.getId_loai());
@@ -118,6 +123,35 @@ public class DanhMucDAO implements DAO<DanhMuc> {
                 DanhMuc dm = new DanhMuc();
                 dm.setId_danhmuc(rs.getInt("id_danhmuc"));
                 dm.setId_nguoidung(rs.getInt("id_nguoidung"));
+                dm.setId_mau(rs.getInt("id_mau"));
+                dm.setId_icon(rs.getInt("id_icon"));
+                dm.setId_loai(rs.getInt("id_loai"));
+                dm.setTen_danh_muc(rs.getString("ten_danh_muc"));
+                list.add(dm);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // Phương thức mới để lấy tất cả danh mục mặc định (id_nguoidung IS NULL)
+    public List<DanhMuc> getAllDefaultCategories() {
+        List<DanhMuc> list = new ArrayList<>();
+        String sql = "SELECT * FROM danhmuc WHERE id_nguoidung IS NULL";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                DanhMuc dm = new DanhMuc();
+                dm.setId_danhmuc(rs.getInt("id_danhmuc"));
+                // Sử dụng getObject để lấy giá trị có thể là null
+                Object idNguoiDungObj = rs.getObject("id_nguoidung");
+                if (idNguoiDungObj != null) {
+                    dm.setId_nguoidung((Integer) idNguoiDungObj);
+                } else {
+                    dm.setId_nguoidung(null);
+                }
                 dm.setId_mau(rs.getInt("id_mau"));
                 dm.setId_icon(rs.getInt("id_icon"));
                 dm.setId_loai(rs.getInt("id_loai"));
