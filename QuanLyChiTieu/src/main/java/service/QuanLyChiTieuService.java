@@ -387,4 +387,9 @@ public class QuanLyChiTieuService {
         System.out.println("DEBUG: Received nameQuery in Service: " + nameQuery);
         return mauSacDAO.searchByName(nameQuery);
     }
+
+    // Lấy danh sách giao dịch của người dùng theo ID
+    public List<GiaoDich> getAllGiaoDichByUserId(int userId) {
+        return giaoDichDAO.getByUserId(userId);
+    }
 } 

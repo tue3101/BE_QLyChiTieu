@@ -89,7 +89,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 
     // Type adapter cho LocalDate
     private static class LocalDateAdapter extends TypeAdapter<LocalDate> {
-        private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
+        private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
         @Override
         public void write(JsonWriter out, LocalDate value) throws IOException {
@@ -155,6 +155,8 @@ public class QuanLyChiTieuServlet extends HttpServlet {
         	// Đặt kiểm tra /api/transactions/search lên trước các đường dẫn transactions khác
             if (pathParts.length > 2 && "search".equals(pathParts[2])) {
                 handleSearchTransactions(request, response);
+            } else if (pathParts.length > 3 && "user".equals(pathParts[2]) && "all".equals(pathParts[4])) { // New endpoint for all transactions by user ID
+                 handleGetAllTransactionsByUserId(request, response, pathParts);
             } else {
                 handleGetTransactions(request, response, pathParts);
             }
@@ -1747,6 +1749,50 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 Internal Server Error
             response.getWriter().write("{\"error\": \"An error occurred while searching colors\"}");
+        }
+    }
+
+    // Phương thức xử lý lấy tất cả giao dịch theo ID người dùng
+    private void handleGetAllTransactionsByUserId(HttpServletRequest request, HttpServletResponse response, String[] pathParts) throws IOException {
+        // Endpoint: /api/transactions/user/{userId}/all
+        if (pathParts.length > 3 && "user".equals(pathParts[2]) && "all".equals(pathParts[4])) {
+            try {
+                int requestedUserId = Integer.parseInt(pathParts[3]);
+
+                // Lấy userId từ request attribute (do AuthFilter đặt)
+                Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+
+                if (authenticatedUserId == null) { // Should not happen if AuthFilter works correctly
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("{\"error\": \"Unauthorized\"}");
+                    return;
+                }
+
+                // Lấy thông tin người dùng yêu cầu để kiểm tra role
+                NguoiDung requestingUser = service.getUserById(authenticatedUserId);
+
+                // Chỉ cho phép xem giao dịch của chính mình hoặc nếu là admin
+                if (requestingUser == null || (!"admin".equals(requestingUser.getRole()) && !authenticatedUserId.equals(requestedUserId))) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().write("{\"error\": \"Forbidden - Cannot access other users' transactions\"}");
+                    return;
+                }
+
+                // Lấy tất cả giao dịch của người dùng được yêu cầu
+                List<GiaoDich> transactions = service.getAllGiaoDichByUserId(requestedUserId);
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write(gson.toJson(transactions));
+            } catch (NumberFormatException e) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"error\": \"Invalid user ID\"}");
+            } catch (Exception e) {
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"error\": \"Internal server error\"}");
+            }
+        } else {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("{\"error\": \"Endpoint not found. Use /api/transactions/user/{userId}/all\"}");
         }
     }
 } 
