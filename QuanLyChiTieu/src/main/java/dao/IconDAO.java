@@ -71,11 +71,14 @@ public class IconDAO implements DAO<Icon> {
     public boolean update(Icon icon) {
         String sql = "UPDATE icon SET ten_icon=?, ma_icon=? WHERE id_icon=?";
         try {
+            System.out.println("DEBUG: Update icon - id: " + icon.getId_icon() + ", ten_icon: " + icon.getTen_icon() + ", ma_icon: " + icon.getMa_icon());
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, icon.getTen_icon());
             ps.setString(2, icon.getMa_icon());
             ps.setInt(3, icon.getId_icon());
-            return ps.executeUpdate() > 0;
+            int rows = ps.executeUpdate();
+            System.out.println("DEBUG: Số dòng bị ảnh hưởng: " + rows);
+            return rows > 0;
         } catch (SQLException e) {
             e.printStackTrace();
         }

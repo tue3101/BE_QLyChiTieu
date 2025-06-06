@@ -137,7 +137,7 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
     
     public List<GiaoDich> getByUserId(int userId) {
         List<GiaoDich> list = new ArrayList<>();
-        String sql = "SELECT * FROM giaodich WHERE id_nguoidung = ?";
+        String sql = "SELECT * FROM giaodich WHERE id_nguoidung = ? ORDER BY ngay DESC";
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, userId);
