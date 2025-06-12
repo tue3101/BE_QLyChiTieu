@@ -57,7 +57,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
     private static class RegisterRequest {
         String email;
         String matkhau;
-        String ten_hien_thi; // Tên hiển thị
+        String hoten; // Tên hiển thị
         String role;
         
         public String getEmail() {
@@ -68,8 +68,8 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             return matkhau;
         }
         
-        public String getTen_hien_thi() {
-            return ten_hien_thi;
+        public String getHoten() {
+            return hoten;
         }
         
         public String getRole() {
@@ -883,6 +883,9 @@ public class QuanLyChiTieuServlet extends HttpServlet {
         try {
             // Đọc trực tiếp từ request reader vào Gson
             registerRequest = gson.fromJson(request.getReader(), RegisterRequest.class);
+            
+            // Debug log
+            System.out.println("Register request received: " + gson.toJson(registerRequest));
 
             if (registerRequest == null || registerRequest.getEmail() == null || registerRequest.getEmail().isEmpty() || registerRequest.getMatkhau() == null || registerRequest.getMatkhau().isEmpty()) {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
@@ -894,18 +897,25 @@ public class QuanLyChiTieuServlet extends HttpServlet {
             NguoiDung newUser = new NguoiDung();
             newUser.setEmail(registerRequest.getEmail());
             newUser.setMatkhau(registerRequest.getMatkhau()); // Mật khẩu sẽ được mã hóa trong Service
-            // Gán tên mặc định nếu không được cung cấp
-            if (registerRequest.getTen_hien_thi() != null && !registerRequest.getTen_hien_thi().isEmpty()) {
-                newUser.setHoten(registerRequest.getTen_hien_thi());
+            
+            // Xử lý tên hiển thị
+            String tenHienThi = registerRequest.getHoten();
+            System.out.println("Ten hien thi from request: " + tenHienThi);
+            
+            if (tenHienThi != null && !tenHienThi.trim().isEmpty()) {
+                newUser.setHoten(tenHienThi.trim());
             } else {
-                newUser.setHoten("Người dùng mới"); // Tên mặc định
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"error\": \"Tên hiển thị không được để trống\"}");
+                return;
             }
+            
             // Gán role mặc định nếu không được cung cấp hoặc không hợp lệ
-             if (registerRequest.getRole() != null && (registerRequest.getRole().equals("user") || registerRequest.getRole().equals("admin"))) {
-                 newUser.setRole(registerRequest.getRole());
-             } else {
-                 newUser.setRole("user"); // Role mặc định
-             }
+            if (registerRequest.getRole() != null && (registerRequest.getRole().equals("user") || registerRequest.getRole().equals("admin"))) {
+                newUser.setRole(registerRequest.getRole());
+            } else {
+                newUser.setRole("user"); // Role mặc định
+            }
 
             boolean success = service.register(newUser);
 
