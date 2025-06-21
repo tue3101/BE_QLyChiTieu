@@ -28,9 +28,11 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
                 gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
                 gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
                 gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setId_tennhom(rs.getString("id_tennhom"));
                 gd.setSo_tien(rs.getDouble("so_tien"));
                 Date sqlDate = rs.getDate("ngay");
                 if (sqlDate != null) {
+                	//java.sql.Date = 2024-06-01 còn toLocalDate() sẽ cho ra LocalDate.of(2024, 6, 1)
                     gd.setNgay(sqlDate.toLocalDate());
                 }
                 gd.setThang(rs.getInt("thang"));
@@ -57,6 +59,7 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
                 gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
                 gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
                 gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setId_tennhom(rs.getString("id_tennhom"));
                 gd.setSo_tien(rs.getDouble("so_tien"));
                 Date sqlDate = rs.getDate("ngay");
                 if (sqlDate != null) {
@@ -75,21 +78,23 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
     
     @Override
     public boolean add(GiaoDich gd) {
-        String sql = "INSERT INTO giaodich(id_danhmuc, id_nguoidung, id_loai, so_tien, ngay, thang, nam, ghi_chu) VALUES(?,?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO giaodich(id_danhmuc, id_nguoidung, id_loai, id_tennhom, so_tien, ngay, thang, nam, ghi_chu) VALUES(?,?,?,?,?,?,?,?,?)";
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, Integer.parseInt(gd.getId_danhmuc()));
             ps.setInt(2, Integer.parseInt(gd.getId_nguoidung()));
             ps.setInt(3, Integer.parseInt(gd.getId_loai()));
-            ps.setDouble(4, gd.getSo_tien());
+            ps.setString(4, gd.getId_tennhom());
+            ps.setDouble(5, gd.getSo_tien());
             if (gd.getNgay() != null) {
-                ps.setDate(5, java.sql.Date.valueOf(gd.getNgay()));
+            	//Chuyển từ LocalDate sang java.sql.Date
+                ps.setDate(6, java.sql.Date.valueOf(gd.getNgay()));
             } else {
-                ps.setNull(5, Types.DATE);
+                ps.setNull(6, Types.DATE);
             }
-            ps.setInt(6, gd.getThang());
-            ps.setInt(7, gd.getNam());
-            ps.setString(8, gd.getGhi_chu());
+            ps.setInt(7, gd.getThang());
+            ps.setInt(8, gd.getNam());
+            ps.setString(9, gd.getGhi_chu());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -99,22 +104,23 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
     
     @Override
     public boolean update(GiaoDich gd) {
-        String sql = "UPDATE giaodich SET id_danhmuc=?, id_nguoidung=?, id_loai=?, so_tien=?, ngay=?, thang=?, nam=?, ghi_chu=? WHERE id_GD=?";
+        String sql = "UPDATE giaodich SET id_danhmuc=?, id_nguoidung=?, id_loai=?, id_tennhom=?, so_tien=?, ngay=?, thang=?, nam=?, ghi_chu=? WHERE id_GD=?";
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, Integer.parseInt(gd.getId_danhmuc()));
             ps.setInt(2, Integer.parseInt(gd.getId_nguoidung()));
             ps.setInt(3, Integer.parseInt(gd.getId_loai()));
-            ps.setDouble(4, gd.getSo_tien());
+            ps.setString(4, gd.getId_tennhom());
+            ps.setDouble(5, gd.getSo_tien());
             if (gd.getNgay() != null) {
-                ps.setDate(5, java.sql.Date.valueOf(gd.getNgay()));
+                ps.setDate(6, java.sql.Date.valueOf(gd.getNgay()));
             } else {
-                ps.setNull(5, Types.DATE);
+                ps.setNull(6, Types.DATE);
             }
-            ps.setInt(6, gd.getThang());
-            ps.setInt(7, gd.getNam());
-            ps.setString(8, gd.getGhi_chu());
-            ps.setInt(9, Integer.parseInt(gd.getId_GD()));
+            ps.setInt(7, gd.getThang());
+            ps.setInt(8, gd.getNam());
+            ps.setString(9, gd.getGhi_chu());
+            ps.setInt(10, Integer.parseInt(gd.getId_GD()));
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -148,6 +154,7 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
                 gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
                 gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
                 gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setId_tennhom(rs.getString("id_tennhom"));
                 gd.setSo_tien(rs.getDouble("so_tien"));
                 Date sqlDate = rs.getDate("ngay");
                 if (sqlDate != null) {
@@ -179,6 +186,7 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
                 gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
                 gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
                 gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setId_tennhom(rs.getString("id_tennhom"));
                 gd.setSo_tien(rs.getDouble("so_tien"));
                 Date sqlDate = rs.getDate("ngay");
                 if (sqlDate != null) {
@@ -210,6 +218,7 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
                 gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
                 gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
                 gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setId_tennhom(rs.getString("id_tennhom"));
                 gd.setSo_tien(rs.getDouble("so_tien"));
                 Date sqlDate = rs.getDate("ngay");
                 if (sqlDate != null) {
