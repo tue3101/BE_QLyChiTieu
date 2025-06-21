@@ -65,6 +65,7 @@ public class NguoiDungDAO implements DAO<NguoiDung> {
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, nd.getHoten());
             ps.setString(2, nd.getEmail());
+            //băm mật khẩu người dùng (mã hóa)
             ps.setString(3, PasswordUtil.hashPassword(nd.getMatkhau()));
             ps.setString(4, nd.getRole());
             return ps.executeUpdate() > 0;
@@ -163,6 +164,7 @@ public class NguoiDungDAO implements DAO<NguoiDung> {
 
     // Phương thức kiểm tra sự tồn tại của email
     public boolean isEmailExists(String email) {
+    	//LIMIT 1 Giới hạn kết quả trả về chỉ 1 dòng 
         String sql = "SELECT 1 FROM nguoidung WHERE email = ? LIMIT 1";
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
@@ -172,7 +174,7 @@ public class NguoiDungDAO implements DAO<NguoiDung> {
         } catch (SQLException e) {
             e.printStackTrace();
             // Xử lý lỗi kết nối/truy vấn - có thể throw exception hoặc trả về false và log lỗi
-            return false; // Giả định lỗi truy vấn nghĩa là không tìm thấy (hoặc xử lý lỗi khác)
+            return false; 
         }
     }
 
@@ -189,7 +191,7 @@ public class NguoiDungDAO implements DAO<NguoiDung> {
                 nd.setId_nguoidung(rs.getInt("id_nguoidung"));
                 nd.setHoten(rs.getString("hoten"));
                 nd.setEmail(rs.getString("email"));
-                nd.setMatkhau(rs.getString("matkhau")); // Có thể cân nhắc không lấy mật khẩu ở đây
+                nd.setMatkhau(rs.getString("matkhau")); 
                 nd.setRole(rs.getString("role"));
                 list.add(nd);
             }
