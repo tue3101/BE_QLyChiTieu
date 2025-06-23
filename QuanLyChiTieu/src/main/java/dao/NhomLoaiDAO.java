@@ -73,28 +73,29 @@ public class NhomLoaiDAO implements DAO<NhomLoaiGD> {
 
 	@Override
 	public boolean update(NhomLoaiGD nlgd) {
-		String sql = "UPDATE nhom_loai_giao_dich SET id_loai =?, ten_nhom=? WHERE id_tennhom=?";
-		try {
-			PreparedStatement ps = conn.prepareStatement(sql);
-			ps.setInt(1, nlgd.getId_loai());
-			ps.setString(2, nlgd.getTennhom());
-			return ps.executeUpdate() > 0;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+//		String sql = "UPDATE nhom_loai_giao_dich SET id_loai =?, ten_nhom=? WHERE id_tennhom=?";
+//		try {
+//			PreparedStatement ps = conn.prepareStatement(sql);
+//			ps.setInt(1, nlgd.getId_loai());
+//			ps.setString(2, nlgd.getTennhom());
+//			return ps.executeUpdate() > 0;
+//		} catch (SQLException e) {
+//			e.printStackTrace();
+//		}
+//		return false;
 		return false;
 	}
 
 	@Override
 	public boolean delete(int id) {
-		String sql = "DELETE FROM nhom_loai_giao_dich WHERE id_tennhom=?";
-		try {
-			PreparedStatement ps = conn.prepareStatement(sql);
-			ps.setInt(1, id);
-			return ps.executeUpdate() > 0;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+//		String sql = "DELETE FROM nhom_loai_giao_dich WHERE id_tennhom=?";
+//		try {
+//			PreparedStatement ps = conn.prepareStatement(sql);
+//			ps.setInt(1, id);
+//			return ps.executeUpdate() > 0;
+//		} catch (SQLException e) {
+//			e.printStackTrace();
+//		}
 		return false;
 	}
 
