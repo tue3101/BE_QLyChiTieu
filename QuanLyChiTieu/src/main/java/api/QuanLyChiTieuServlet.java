@@ -268,36 +268,31 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			/////các endpoint mới 
 //		} else if ("balance".equals(resource)) { 
 //			handleGetBalance(request, response, pathParts);
-		} else if ("nhom-loai".equals(resource)) {
-			// Nếu có dạng /api/nhom-loai/user/{userId}
+		} else if ("nhom-loai".equals(resource)) { ///api/nhom-loai/user/{userId} 
+			// /api/nhom-loai/user/{userId}
 			if (pathParts.length > 3 && "user".equals(pathParts[2])) {
 				try {
-					System.out.println("DEBUG nhom-loai: pathParts[3] = " + pathParts[3]);
 					int requestedUserId = Integer.parseInt(pathParts[3]);
-					Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+					Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);//hằng số lưu tên thuộc tính userId
 					if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
-						System.out.println("DEBUG nhom-loai: authenticatedUserId = " + authenticatedUserId + ", requestedUserId = " + requestedUserId);
-						response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-						response.getWriter().write("{\"error\": \"Forbidden - Cannot access other users' nhom-loai\"}");
+						response.setStatus(HttpServletResponse.SC_FORBIDDEN);//403 ko có quyền truy cập
 						return;
 					}
 					List<model.NhomLoaiGD> list = service.getNhomLoaiGDByUserId(requestedUserId);
 					response.setStatus(HttpServletResponse.SC_OK);
 					response.setContentType("application/json");
-					response.getWriter().write(gson.toJson(list));
+					response.getWriter().write(gson.toJson(list)); //chuyển đổi ds thành json rồi ghi vào phản hồi 
 				} catch (NumberFormatException e) {
-					System.out.println("ERROR nhom-loai: Invalid user ID, pathParts[3] = " + pathParts[3]);
 					e.printStackTrace();
-					response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+					response.setStatus(HttpServletResponse.SC_BAD_REQUEST);//404 yc ko hợp lệ
 					response.getWriter().write("{\"error\": \"Invalid user ID\"}");
 				} catch (Exception e) {
-					System.out.println("ERROR nhom-loai: Exception khi lấy nhom-loai theo userId " + pathParts[3]);
 					e.printStackTrace();
 					response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 					response.getWriter().write("{\"error\": \"Internal server error\"}");
 				}
 				return;
-			} else if (request.getMethod().equals("GET")) {
+			} else if (request.getMethod().equals("GET")) {//kiểm tra phương thức có phải get
 				handleGetNhomLoai(request, response);
 				return;
 			}
@@ -400,7 +395,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 		response.setContentType("application/json");// Thiết lập Content-Type của HTTP response là application/json.
 		response.setCharacterEncoding("UTF-8");// Đặt mã hóa ký tự cho nội dung phản hồi là UTF-8 như t.viet, và  unicode 
 
-		if (pathInfo == null || pathInfo.equals("/")) {
+		if (pathInfo == null || pathInfo.equals("/")) {//ko có / hoặc chỉ / 
 			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			response.getWriter().write("{\"error\": \"Endpoint not specified\"}");
 			return;
@@ -908,10 +903,17 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 
 			newGiaoDich.setId_nguoidung(String.valueOf(userId)); // Gán userId từ token
 
-			// bất kỳ giao dịch nào nếu không truyền id_tennhom thì mặc định gán id_tennhom = "1"
-			if (newGiaoDich.getId_tennhom() == null || newGiaoDich.getId_tennhom().isEmpty()) {
+			// Xử lý id_tennhom dựa trên loại giao dịch
+			if (newGiaoDich.getId_loai().equals("2")) {
+				// Nếu giao dịch thuộc loại "Chi tiêu" (id_loai = "2"),
+				// mặc định gán nó vào nhóm "Chi tiêu phát sinh" (id_tennhom = "2").
 				newGiaoDich.setId_tennhom("2");
+			} else if (newGiaoDich.getId_loai().equals("1")) {
+				// Nếu giao dịch thuộc loại "Thu nhập" (id_loai = "1"),
+				// gán id_tennhom = null
+				newGiaoDich.setId_tennhom(null);
 			}
+			// Nếu id_tennhom vẫn là null hoặc rỗng, có thể set giá trị mặc định khác nếu cần
 
 			// Đảm bảo ngày, tháng, năm được thiết lập nếu cần (từ request hoặc hệ thống)
 			// Logic xử lý ngày, tháng, năm đã được chuyển sang Service để tập trung
@@ -1217,11 +1219,11 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			newNganSach.setId_nguoidung(userId); // Gán userId từ token (sử dụng Integer)
 
 			// Kiểm tra trùng ngân sách cho tháng/năm của người dùng
-			if (service.isNganSachExistForMonthYear(userId, newNganSach.getThang(), newNganSach.getNam())) {
-				response.setStatus(HttpServletResponse.SC_CONFLICT); // 409 Conflict
-				response.getWriter().write("{\"error\": \"Budget for this month and year already exists\"}");
-				return;
-			}
+//			if (service.isNganSachExistForMonthYear(userId, newNganSach.getThang(), newNganSach.getNam())) {
+//				response.setStatus(HttpServletResponse.SC_CONFLICT); // 409 Conflict
+//				response.getWriter().write("{\"error\": \"Budget for this month and year already exists\"}");
+//				return;
+//			}
 
 			boolean success = service.addNganSach(newNganSach);
 
@@ -2066,14 +2068,19 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 
 	// --- Chi tiêu hàng tháng ---
 	private void handleGetAllChiTieuHangThang(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		//List<model.ChiTieuHangThang>	Danh sách đối tượng ChiTieuHangThang nằm trong package model
+		//service.getAllCTHangThang()	Gọi phương thức từ service để lấy toàn bộ chi tiêu hàng tháng 
 		List<model.ChiTieuHangThang> list = service.getAllCTHangThang();
 		response.setStatus(HttpServletResponse.SC_OK);
 		response.setContentType("application/json");
+		//chuyển danh sách list thành JSON bằng thư viện Gson
+		//sau đó ghi chuỗi JSON đó vào phản hồi HTTP để gửi về cho client
 		response.getWriter().write(gson.toJson(list));
 	}
 	
 	//lấy chi tiêu hàng tháng bằng tháng , năm
 	private void handleGetChiTieuHangThangByMonth(HttpServletRequest request, HttpServletResponse response, String[] pathParts) throws IOException {
+		// lấy và chuyển đổi các tham số từ URL (dạng RESTful) thành số nguyên
 		int userId = Integer.parseInt(pathParts[3]);
 		int month = Integer.parseInt(pathParts[5]);
 		int year = Integer.parseInt(pathParts[7]);
@@ -2171,6 +2178,31 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 		} else {
 			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			response.getWriter().write("{\"error\": \"Endpoint not found. Use /api/chi-tieu-hang-thang/user/{userId}/all\"}");
+		}
+	}
+
+	// Thêm hàm xử lý mới cho endpoint ngân sách kế thừa/cập nhật
+	private void handleNganSachOrInheritOrUpdate(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		class NganSachOrInheritOrUpdateRequest {
+			public int userId;
+			public int thang;
+			public int nam;
+			public Double newAmount;
+			public boolean isUpdate;
+		}
+		try {
+			NganSachOrInheritOrUpdateRequest req = gson.fromJson(request.getReader(), NganSachOrInheritOrUpdateRequest.class);
+			if (req == null) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				response.getWriter().write("{\"error\": \"Invalid request body\"}");
+				return;
+			}
+			double result = service.getOrInheritOrUpdateNganSach(req.userId, req.thang, req.nam, req.newAmount, req.isUpdate);
+			response.setStatus(HttpServletResponse.SC_OK);
+			response.getWriter().write("{\"ngansach\": " + result + "}");
+		} catch (Exception e) {
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
 		}
 	}
 }

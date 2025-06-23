@@ -510,4 +510,9 @@ public class QuanLyChiTieuService {
 	public List<ChiTieuHangThang> getAllCTHangThangByUserId(int userId) {
 		return chiTieuHangThangDAO.getAllByUserId(userId);
 	}
+
+	// Lấy hoặc kế thừa/cập nhật ngân sách tháng
+	public double getOrInheritOrUpdateNganSach(int userId, int thang, int nam, Double newAmount, boolean isUpdate) {
+		return nganSachDAO.getOrInheritOrUpdate(userId, thang, nam, newAmount, isUpdate);
+	}
 }
