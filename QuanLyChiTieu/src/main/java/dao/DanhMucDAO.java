@@ -16,6 +16,10 @@ public class DanhMucDAO implements DAO<DanhMuc> {
         this.conn = DBConnection.getConnection();
     }
     
+    public DanhMucDAO(Connection conn) {
+        this.conn = conn;
+    }
+    
     @Override //ghi đè phương thức getAll
     public List<DanhMuc> getAll() { //trả về list chứa các đối tượng DM
         List<DanhMuc> list = new ArrayList<>(); //tạo ds rỗng chứa các đối tượng từ CSDL

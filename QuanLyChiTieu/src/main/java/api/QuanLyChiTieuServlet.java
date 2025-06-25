@@ -28,6 +28,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Calendar; // Vẫn cần Calendar cho các phương thức khác, nhưng không dùng cho LocalDate
+import java.sql.Date;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @WebServlet("/api/*")
 public class QuanLyChiTieuServlet extends HttpServlet {
@@ -318,20 +321,88 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			} else if (request.getMethod().equals("GET")) {
 				handleGetAllChiTieuHangThang(request, response);
 				return; // <-- THÊM DÒNG NÀY
+			}	
+				
+			//========cac endpoint moi====//
+			
+		}else if ("buoi".equals(resource)) {
+			handleGetBuois(request, response);
+		}else if ("mucluong".equals(resource)) {
+			handleGetMucLuongs(request, response);
+		}else if ("goiy".equals(resource)) {
+			handleGetGoiYs(request, response);
+		}else if ("loaichitieu".equals(resource)) {
+			handleGetLoaiChiTieus(request, response);
+		}else if ("chitieumau".equals(resource)) {
+			handleGetChiTieuMau(request, response);
+		}//cập nhật tên chi tiêu mẫu  
+		else if ("chitieumau".equals(resource) && pathParts.length > 2 && "update-all-name".equals(pathParts[2])) {
+			// Xử lý cập nhật toàn bộ tên chi tiêu mẫu
+			try {
+				com.google.gson.JsonObject json = gson.fromJson(request.getReader(), com.google.gson.JsonObject.class);
+				if (json == null || !json.has("ten_moi")) {
+					response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+					response.getWriter().write("{\"error\": \"Missing 'ten_moi' trong request body\"}");
+					return;
+				}
+				String tenMoi = json.get("ten_moi").getAsString();
+				boolean success = service.updateAllTenChiTieuMau(tenMoi);
+				if (success) {
+					response.setStatus(HttpServletResponse.SC_OK);
+					response.getWriter().write("{\"message\": \"Cập nhật tất cả tên chi tiêu mẫu thành công\"}");
+				} else {
+					response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+					response.getWriter().write("{\"error\": \"Cập nhật thất bại\"}");
+				}
+			} catch (Exception e) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				response.getWriter().write("{\"error\": \"Invalid request\"}");
 			}
-//		} else if ("income".equals(resource)) {
-//			if (pathParts.length > 7 && "user".equals(pathParts[2]) && "month".equals(pathParts[4]) && "year".equals(pathParts[6])) {
-//				if (pathParts.length > 8 && "before".equals(pathParts[8])) {
-//					handleGetIncomeBefore(request, response, pathParts);
-//				} else if (pathParts.length > 8 && "after".equals(pathParts[8])) {
-//					handleGetIncomeAfter(request, response, pathParts);
+		}
+		else if ("chitieumau".equals(resource) && pathParts.length > 2) {
+			// PUT /api/chitieumau/{id} 
+			try {
+				int id = Integer.parseInt(pathParts[2]);
+				com.google.gson.JsonObject json = gson.fromJson(request.getReader(), com.google.gson.JsonObject.class);
+				if (json == null || !json.has("ten_chi_tieu_mau")) {
+					response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+					response.getWriter().write("{\"error\": \"Missing 'ten_chi_tieu_mau' in request body\"}");
+					return;
+				}
+				String tenMoi = json.get("ten_chi_tieu_mau").getAsString();
+				boolean success = service.updateChiTieuMauTen(id, tenMoi);
+				if (success) {
+					response.setStatus(HttpServletResponse.SC_OK);
+					response.getWriter().write("{\"message\": \"Cập nhật tên chi tiêu mẫu thành công\"}");
+				} else {
+					response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+					response.getWriter().write("{\"error\": \"Cập nhật thất bại\"}");
+				}
+			} catch (Exception e) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				response.getWriter().write("{\"error\": \"Invalid request or id\"}");
+			}
+		}
+		// Export các khoản chi tiêu từ giao_dich sang chitieu30ngay theo tháng
+//		else if ("chitieumau".equals(resource) && pathParts.length > 2 && "export-from-giaodich".equals(pathParts[2])) {
+//			try {
+//				String thangParam = request.getParameter("thang");
+//				int thang;
+//				if (thangParam == null) {
+//					// Nếu không truyền, mặc định là tháng hiện tại
+//					thang = java.time.LocalDate.now().getMonthValue();
+//				} else {
+//					thang = Integer.parseInt(thangParam);
 //				}
+//				List<model.ChiTieuMau> exported = service.exportChiTieuMauFromGiaoDich(thang);
+//				response.setStatus(HttpServletResponse.SC_OK);
+//				response.getWriter().write(gson.toJson(exported));
+//			} catch (Exception e) {
+//				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+//				response.getWriter().write("{\"error\": \"Export thất bại\"}");
 //			}
-//		} else if ("expense".equals(resource)) {
-//			if (pathParts.length > 7 && "user".equals(pathParts[2]) && "month".equals(pathParts[4]) && "year".equals(pathParts[6])) {
-//				handleGetExpense(request, response, pathParts);
-//			}
-		} else {
+//		}
+		else {
 			//404 Tài nguyên được yêu cầu không tồn tại trên server.
 			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			response.getWriter().write("{\"error\": \"Endpoint not found\"}");
@@ -376,14 +447,44 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			handleLogout(request, response);
 		} else if ("admin-add-user".equals(endpoint)) {
 			handleAdminAddUser(request, response);
-		} 
-//		else if (request.getMethod().equals("POST")) {
-//				handlePostNhomLoai(request, response);
-//			}else {
-//			//404
-//			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-//			response.getWriter().write("{\"error\": \"Endpoint not found\"}");
-//		}
+		} else if ("export".equals(endpoint) && pathParts.length > 2 && "process-transactions".equals(pathParts[2])) {
+			handleProcessTransactions(request, response);
+		} else {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND, "Endpoint not found for POST method");
+		}
+	}
+
+	private static class ProcessRequest {
+		int thang;
+		int id_nguoidung;
+	}
+
+	private void handleProcessTransactions(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		    System.out.println("==> ĐÃ VÀO handleProcessTransactions");
+
+		try {
+			String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
+			ProcessRequest processRequest = gson.fromJson(body, ProcessRequest.class);
+
+			if (processRequest == null || processRequest.thang <= 0 || processRequest.id_nguoidung <= 0) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				response.getWriter().write(gson.toJson(Map.of("status", "error", "message", "Thiếu hoặc sai tham số 'thang' và 'id_nguoidung'")));
+				return;
+			}
+			
+			int processedCount = service.processGiaoDichChiTieu(processRequest.thang, processRequest.id_nguoidung);
+
+			if (processedCount >= 0) {
+				response.setStatus(HttpServletResponse.SC_OK);
+				response.getWriter().write(gson.toJson(Map.of("status", "success", "processed", processedCount)));
+			} else {
+				throw new Exception("Lỗi xử lý giao dịch trong service.");
+			}
+		} catch (Exception e) {
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write(gson.toJson(Map.of("status", "error", "message", "Lỗi server: " + e.getMessage())));
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -489,7 +590,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 				response.getWriter().write("{\"error\": \"Internal server error\"}");
 			}
-		}else if ("chi-tieu-hang-thang".equals(resource)) {
+		} else if ("chi-tieu-hang-thang".equals(resource)) {
 			if (pathParts.length > 2 && "user".equals(pathParts[2]) && pathParts.length > 6 && "month".equals(pathParts[4]) && "year".equals(pathParts[6])) {
 				if (pathParts.length > 8 && "amount".equals(pathParts[8])) {
 					handlePutChiTieuHangThangAmount(request, response, pathParts);
@@ -504,6 +605,34 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 		System.out.println("DEBUG doPut pathInfo: " + pathInfo);
 		System.out.println("DEBUG doPut pathParts: " + Arrays.toString(pathParts));
 		System.out.println("DEBUG doPut resource: " + resource);
+		
+		//cập nhật chi tiêu mẫu 
+		} else if ("chitieumau".equals(resource) && pathParts.length > 2) {
+			// PUT /api/chitieumau/{id} 
+			try {
+				int id = Integer.parseInt(pathParts[2]);
+				com.google.gson.JsonObject json = gson.fromJson(request.getReader(), com.google.gson.JsonObject.class);
+				if (json == null || !json.has("ten_chi_tieu_mau")) {
+					response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+					response.getWriter().write("{\"error\": \"Missing 'ten_chi_tieu_mau' in request body\"}");
+					return;
+				}
+				String tenMoi = json.get("ten_chi_tieu_mau").getAsString();
+				boolean success = service.updateChiTieuMauTen(id, tenMoi);
+				if (success) {
+					response.setStatus(HttpServletResponse.SC_OK);
+					response.getWriter().write("{\"message\": \"Cập nhật tên chi tiêu mẫu thành công\"}");
+				} else {
+					response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+					response.getWriter().write("{\"error\": \"Cập nhật thất bại\"}");
+				}
+			} catch (Exception e) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				response.getWriter().write("{\"error\": \"Invalid request or id\"}");
+			}
+		} else {
+			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+			response.getWriter().write("{\"error\": \"Endpoint not found or missing ID\"}");
 		}
 	}
 
@@ -699,7 +828,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			response.getWriter().write("{\"error\": \"Invalid JSON format\"}");
 		} catch (Exception e) {
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-			response.getWriter().write("{\"error\": \"An unexpected error occurred: " + e.getMessage() + "\"}");
+				response.getWriter().write("{\"error\": \"An unexpected error occurred: " + e.getMessage() + "\"}");
 			e.printStackTrace(); // Log lỗi ra console server để debug
 		}
 	}
@@ -2205,4 +2334,70 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
 		}
 	}
+	
+	
+	
+	//=======cac handle moi=====//
+	private void handleGetBuois(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		try {
+			List<model.Buoi> buoi = service.getAllBuoi();
+			response.setStatus(HttpServletResponse.SC_OK);
+			response.getWriter().write(gson.toJson(buoi));
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"Internal server error\"}");
+		}
+		
+	}
+	private void handleGetMucLuongs(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		try {
+			List<model.MucLuong> mucluong = service.getAllMucLuong();
+			response.setStatus(HttpServletResponse.SC_OK);
+			response.getWriter().write(gson.toJson(mucluong));
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"Internal server error\"}");
+		}
+	}
+	
+	private void handleGetLoaiChiTieus(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		try {
+			List<model.LoaiChiTieu> loaichitieu = service.getAllLoaiChiTieu();
+			response.setStatus(HttpServletResponse.SC_OK);
+			response.getWriter().write(gson.toJson(loaichitieu));
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"Internal server error\"}");
+		}
+	}
+	private void handleGetGoiYs(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		try {
+			List<model.GoiY> goiy = service.getAllGoiY();
+			response.setStatus(HttpServletResponse.SC_OK);
+			response.getWriter().write(gson.toJson(goiy));
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"Internal server error\"}");
+		}
+	}
+	private void handleGetChiTieuMau(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		try {
+			List<model.ChiTieuMau> chitieumau = service.getAllChiTieuMau();
+			response.setStatus(HttpServletResponse.SC_OK);
+			response.getWriter().write(gson.toJson(chitieumau));
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"Internal server error\"}");
+		}
+	}
+	static {
+		System.out.println("==> STATIC BLOCK QuanLyChiTieuServlet ĐÃ ĐƯỢC LOAD");
+	}
+	
 }
+
