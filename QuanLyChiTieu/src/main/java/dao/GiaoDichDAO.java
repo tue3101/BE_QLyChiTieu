@@ -15,6 +15,10 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
         this.conn = DBConnection.getConnection();
     }
     
+    public GiaoDichDAO(Connection conn) {
+        this.conn = conn;
+    }
+    
     @Override
     public List<GiaoDich> getAll() {
         List<GiaoDich> list = new ArrayList<>();
@@ -211,6 +215,38 @@ public class GiaoDichDAO implements DAO<GiaoDich> {
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, userId);
             ps.setString(2, "%" + keyword + "%"); // Tìm kiếm từ khóa xuất hiện ở bất kỳ đâu trong ghi_chu
+            ResultSet rs = ps.executeQuery();
+            while(rs.next()) {
+                GiaoDich gd = new GiaoDich();
+                gd.setId_GD(String.valueOf(rs.getInt("id_GD")));
+                gd.setId_danhmuc(String.valueOf(rs.getInt("id_danhmuc")));
+                gd.setId_nguoidung(String.valueOf(rs.getInt("id_nguoidung")));
+                gd.setId_loai(String.valueOf(rs.getInt("id_loai")));
+                gd.setId_tennhom(rs.getString("id_tennhom"));
+                gd.setSo_tien(rs.getDouble("so_tien"));
+                Date sqlDate = rs.getDate("ngay");
+                if (sqlDate != null) {
+                    gd.setNgay(sqlDate.toLocalDate());
+                }
+                gd.setThang(rs.getInt("thang"));
+                gd.setNam(rs.getInt("nam"));
+                gd.setGhi_chu(rs.getString("ghi_chu"));
+                list.add(gd);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
+    public List<GiaoDich> getChiTieuByThangAndNguoiDung(int idNguoiDung, int thang, int nam) {
+        List<GiaoDich> list = new ArrayList<>();
+        String sql = "SELECT * FROM giaodich WHERE id_nguoidung = ? AND thang = ? AND nam = ? AND id_loai = 2";
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, idNguoiDung);
+            ps.setInt(2, thang);
+            ps.setInt(3, nam);
             ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 GiaoDich gd = new GiaoDich();
