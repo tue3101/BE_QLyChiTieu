@@ -7,6 +7,9 @@ import java.util.List;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
+import java.sql.Connection;
+import java.sql.SQLException;
+import config.DBConnection;
 
 //tầng service là nơi sử lý nghiệp vụ: xthuc , mã hóa...
 public class QuanLyChiTieuService {
@@ -21,6 +24,16 @@ public class QuanLyChiTieuService {
 	private NhomLoaiDAO nhomLoaiDAO; // khai báo thêm nhóm loại
 	private ChiTieuHangThangDAO chiTieuHangThangDAO; // khai báo chi tiêu hàng tháng
 
+	
+	//============các DAO mới======//
+	private BuoiDAO buoiDAO;
+	private MucLuongDAO mucLuongDAO;
+	private ChiTieuMauDAO chiTieuMauDAO;
+	private GoiYDAO goiyDAO;
+	private LoaiChiTieuDAO loaiChiTieuDAO;
+	
+	
+	
 	public QuanLyChiTieuService() {
 		// đối tượng mới từ lớp DAO và gán cho biến để dùng các hàm có trong lớp DAO
 		this.nguoiDungDAO = new NguoiDungDAO();
@@ -32,6 +45,14 @@ public class QuanLyChiTieuService {
 		this.loaiGiaoDichDAO = new LoaiGiaoDichDAO();
 		this.nhomLoaiDAO = new NhomLoaiDAO();// thêm đối tượng và gán cho biến
 		this.chiTieuHangThangDAO = new ChiTieuHangThangDAO();// thêm
+	//================các đối tượng mới======//
+		this.buoiDAO = new BuoiDAO();
+		this.mucLuongDAO = new MucLuongDAO();
+		this.chiTieuMauDAO = new ChiTieuMauDAO();
+		this.goiyDAO = new GoiYDAO();
+		this.loaiChiTieuDAO = new LoaiChiTieuDAO();
+	
+	
 	}
 
 	// Xử lý đăng nhập
@@ -514,5 +535,147 @@ public class QuanLyChiTieuService {
 	// Lấy hoặc kế thừa/cập nhật ngân sách tháng
 	public double getOrInheritOrUpdateNganSach(int userId, int thang, int nam, Double newAmount, boolean isUpdate) {
 		return nganSachDAO.getOrInheritOrUpdate(userId, thang, nam, newAmount, isUpdate);
+	}
+	
+	
+	
+	
+	//======cac service moi====//
+	public List<Buoi> getAllBuoi(){
+		return buoiDAO.getAll();
+	}
+	public List<MucLuong> getAllMucLuong(){
+		return mucLuongDAO.getAll();
+	}
+	public List<LoaiChiTieu> getAllLoaiChiTieu(){
+		return loaiChiTieuDAO.getAll();
+		
+	}
+	public List<GoiY>  getAllGoiY(){
+		return goiyDAO.getAll();
+	}
+	public List<ChiTieuMau> getAllChiTieuMau(){
+		return chiTieuMauDAO.getAll();
+	}
+
+	// Cập nhật tên chi tiêu mẫu
+	public boolean updateChiTieuMauTen(int id, String tenMoi) {
+		model.ChiTieuMau ctm = new model.ChiTieuMau();
+		ctm.setId(id);
+		ctm.setTen_chi_tieu_mau(tenMoi);
+		return chiTieuMauDAO.update(ctm);
+	}
+
+	// Cập nhật tất cả tên chi tiêu mẫu thành tên mới
+	public boolean updateAllTenChiTieuMau(String tenMoi) {
+		return chiTieuMauDAO.updateAllTenChiTieuMau(tenMoi);
+	}
+
+	// Export các khoản chi tiêu từ giao_dich sang chitieu30ngay theo tháng
+	// public List<model.ChiTieuMau> exportChiTieuMauFromGiaoDich(int thang) {
+	// 	return chiTieuMauDAO.exportFromGiaoDich(thang);
+	// }
+
+	// Export các khoản chi tiêu từ giao_dich sang chitieu30ngay theo tháng (trả về danh sách chi tiết)
+//	public List<model.ChiTieuMau> exportGiaoDichToChiTieu30Ngay(int thang) {
+//		return chiTieuMauDAO.exportGiaoDichToChiTieu30Ngay(thang);
+//	}
+
+	public int processGiaoDichChiTieu(int thang, int idNguoiDung) {
+		Connection conn = null;
+		int processedCount = 0;
+		try {
+			// Get a single connection for the entire transaction
+			conn = DBConnection.getConnection();
+			if (conn == null) {
+				throw new SQLException("Không thể kết nối tới cơ sở dữ liệu.");
+			}
+			// Disable auto-commit to start a transaction
+			conn.setAutoCommit(false);
+
+			// Instantiate DAOs with the shared connection
+			GiaoDichDAO transGiaoDichDAO = new GiaoDichDAO(conn);
+			DanhMucDAO transDanhMucDAO = new DanhMucDAO(conn);
+			GoiYDAO transGoiYDAO = new GoiYDAO(conn);
+			ChiTieuMauDAO transChiTieuMauDAO = new ChiTieuMauDAO(conn);
+
+			// 1. Get the current year
+			int nam = java.time.LocalDate.now().getYear();
+
+			System.out.println("Gọi processGiaoDichChiTieu với thang=" + thang + ", idNguoiDung=" + idNguoiDung + ", nam=" + nam);
+
+			// 2. Get all expense transactions for the given month, year, and user
+			List<GiaoDich> giaoDichList = transGiaoDichDAO.getChiTieuByThangAndNguoiDung(idNguoiDung, thang, nam);
+
+			System.out.println("Số lượng giao dịch chi tiêu lấy được: " + giaoDichList.size());
+
+			// 3. Process each transaction
+			for (GiaoDich gd : giaoDichList) {
+				System.out.println("Đang xử lý giao dịch ID: " + gd.getId_GD());
+				DanhMuc dm = transDanhMucDAO.getById(Integer.parseInt(gd.getId_danhmuc()));
+				if (dm == null) {
+					System.err.println("Không tìm thấy danh mục ID: " + gd.getId_danhmuc() + ". Bỏ qua giao dịch ID: " + gd.getId_GD());
+					continue;
+				}
+				System.out.println("Tìm thấy danh mục: " + dm.getTen_danh_muc());
+				int idLoaiChi = dm.getId_loai();
+
+				GoiY newGoiY = new GoiY();
+				newGoiY.setGoi_y(dm.getTen_danh_muc());
+				newGoiY.setGia(gd.getSo_tien());
+				newGoiY.setId_loai_chi(idLoaiChi);
+
+				int newGoiYId = transGoiYDAO.addGoiYAndGetId(newGoiY);
+				System.out.println("ID gợi ý mới: " + newGoiYId);
+				if (newGoiYId == -1) {
+					System.err.println("Không thể tạo bản ghi Gợi Ý cho giao dịch ID: " + gd.getId_GD());
+					continue;
+				}
+
+				int ngayTrongThang = gd.getNgay().getDayOfMonth();
+				String tenChiTieuMau = "Chi tiêu tháng " + thang;
+				int idMucLuongDefault = 1;
+				int idBuoiDefault = 5;
+
+				System.out.println("Chuẩn bị insert chitieu30ngay cho giao dịch ID: " + gd.getId_GD());
+				boolean success = transChiTieuMauDAO.addChiTieu30Ngay(
+					idNguoiDung, idMucLuongDefault, idBuoiDefault, idLoaiChi, newGoiYId, tenChiTieuMau, ngayTrongThang
+				);
+				System.out.println("Kết quả insert: " + success);
+
+				if (success) {
+					processedCount++;
+				} else {
+					System.err.println("Không thể tạo bản ghi chitieu30ngay cho giao dịch ID: " + gd.getId_GD());
+				}
+			}
+
+			// If all operations are successful, commit the transaction
+			conn.commit();
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.err.println("Lỗi SQL: " + e.getMessage());
+			if (conn != null) {
+				try {
+					System.err.println("Lỗi xảy ra, giao dịch đang được rollback...");
+					conn.rollback();
+				} catch (SQLException ex) {
+					ex.printStackTrace();
+				}
+			}
+			return -1; // Indicate error
+		} finally {
+			if (conn != null) {
+				try {
+					conn.setAutoCommit(true);
+					conn.close(); // Return connection to the pool if pooling is used, otherwise close it.
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+		return processedCount;
 	}
 }
