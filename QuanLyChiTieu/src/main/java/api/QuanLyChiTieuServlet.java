@@ -215,12 +215,12 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			if (pathParts.length > 2 // URL có ít nhất 3 phần
 					&& "search".equals(pathParts[2])) {// phần thứ ba
 				handleSearchTransactions(request, response);
-			} else if (pathParts.length > 3 //Kiểm tra mảng có đủ phần tử để lấy được pathParts[4]
-					&& "user".equals(pathParts[2]) //Xác định rằng URL đang nói đến người dùng (user).
-					&& "all".equals(pathParts[4])) {//Xác định yêu cầu là lấy tất cả danh mục của người dùng đó
+			} else if (pathParts.length > 3 // Kiểm tra mảng có đủ phần tử để lấy được pathParts[4]
+					&& "user".equals(pathParts[2]) // Xác định rằng URL đang nói đến người dùng (user).
+					&& "all".equals(pathParts[4])) {// Xác định yêu cầu là lấy tất cả danh mục của người dùng đó
 				handleGetAllTransactionsByUserId(request, response, pathParts);
 			} else {
-				//chuyển sang xử lý giao dịch (transactions).
+				// chuyển sang xử lý giao dịch (transactions).
 				handleGetTransactions(request, response, pathParts);
 			}
 		} else if ("budget".equals(resource)) {// Kiểm tra tên tài nguyên trong URL có phải "budget"
@@ -247,12 +247,12 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 					handleGetUserById(request, response, userId);
 				}
 			} catch (NumberFormatException e) {
-				//trạng thái 400 (ko hợp lệ)
+				// trạng thái 400 (ko hợp lệ)
 				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 				response.getWriter().write("{\"error\": \"Invalid user ID\"}");
 			} catch (Exception e) {
-				e.printStackTrace();//In ra ngăn xếp lỗi
-				//Thiết lập mã lỗi HTTP 500 – Internal Server Error
+				e.printStackTrace();// In ra ngăn xếp lỗi
+				// Thiết lập mã lỗi HTTP 500 – Internal Server Error
 				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 				response.getWriter().write("{\"error\": \"Internal server error\"}");
 			}
@@ -267,27 +267,27 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 		} else if ("icons".equals(resource) && pathParts.length > 2 && "search".equals(pathParts[2])) {
 			handleSearchIcons(request, response);
 
-
-			/////các endpoint mới 
+			///// các endpoint mới
 //		} else if ("balance".equals(resource)) { 
 //			handleGetBalance(request, response, pathParts);
-		} else if ("nhom-loai".equals(resource)) { ///api/nhom-loai/user/{userId} 
+		} else if ("nhom-loai".equals(resource)) { /// api/nhom-loai/user/{userId}
 			// /api/nhom-loai/user/{userId}
 			if (pathParts.length > 3 && "user".equals(pathParts[2])) {
 				try {
 					int requestedUserId = Integer.parseInt(pathParts[3]);
-					Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);//hằng số lưu tên thuộc tính userId
+					Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);// hằng số lưu tên
+																									// thuộc tính userId
 					if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
-						response.setStatus(HttpServletResponse.SC_FORBIDDEN);//403 ko có quyền truy cập
+						response.setStatus(HttpServletResponse.SC_FORBIDDEN);// 403 ko có quyền truy cập
 						return;
 					}
 					List<model.NhomLoaiGD> list = service.getNhomLoaiGDByUserId(requestedUserId);
 					response.setStatus(HttpServletResponse.SC_OK);
 					response.setContentType("application/json");
-					response.getWriter().write(gson.toJson(list)); //chuyển đổi ds thành json rồi ghi vào phản hồi 
+					response.getWriter().write(gson.toJson(list)); // chuyển đổi ds thành json rồi ghi vào phản hồi
 				} catch (NumberFormatException e) {
 					e.printStackTrace();
-					response.setStatus(HttpServletResponse.SC_BAD_REQUEST);//404 yc ko hợp lệ
+					response.setStatus(HttpServletResponse.SC_BAD_REQUEST);// 404 yc ko hợp lệ
 					response.getWriter().write("{\"error\": \"Invalid user ID\"}");
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -295,7 +295,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 					response.getWriter().write("{\"error\": \"Internal server error\"}");
 				}
 				return;
-			} else if (request.getMethod().equals("GET")) {//kiểm tra phương thức có phải get
+			} else if (request.getMethod().equals("GET")) {// kiểm tra phương thức có phải get
 				handleGetNhomLoai(request, response);
 				return;
 			}
@@ -308,12 +308,13 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 //				response.getWriter().write(gson.toJson(list));
 				handleGetAllChiTieuHangThangByUserId(request, response, pathParts);
 				return;
-			} else if (pathParts.length > 2 && "user".equals(pathParts[2]) && pathParts.length > 6 && "month".equals(pathParts[4]) && "year".equals(pathParts[6])) {
+			} else if (pathParts.length > 2 && "user".equals(pathParts[2]) && pathParts.length > 6
+					&& "month".equals(pathParts[4]) && "year".equals(pathParts[6])) {
 				if (pathParts.length > 8 && "amount".equals(pathParts[8])) {
 					if (request.getMethod().equals("GET")) {
 						handleGetChiTieuHangThangAmount(request, response, pathParts);
 						return;
-					} 
+					}
 				} else {
 					handleGetChiTieuHangThangByMonth(request, response, pathParts);
 					return; // <-- THÊM DÒNG NÀY
@@ -321,21 +322,35 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			} else if (request.getMethod().equals("GET")) {
 				handleGetAllChiTieuHangThang(request, response);
 				return; // <-- THÊM DÒNG NÀY
-			}	
-				
-			//========cac endpoint moi====//
-			
-		}else if ("buoi".equals(resource)) {
+			}
+
+			// ========cac endpoint moi====//
+
+		} else if ("buoi".equals(resource)) {
 			handleGetBuois(request, response);
-		}else if ("mucluong".equals(resource)) {
+		} else if ("mucluong".equals(resource)) {
 			handleGetMucLuongs(request, response);
-		}else if ("goiy".equals(resource)) {
+		} else if ("goiy".equals(resource)) {
 			handleGetGoiYs(request, response);
-		}else if ("loaichitieu".equals(resource)) {
+		} else if ("loaichitieu".equals(resource)) {
 			handleGetLoaiChiTieus(request, response);
-		}else if ("chitieumau".equals(resource)) {
+
+			/// lấy chi tiêu mẫu
+		} else if ("chitieumau".equals(resource)) {
+			if (pathParts.length > 2) {
+				if ("user".equals(pathParts[2]) && pathParts.length > 3) {
+					// /api/chitieumau/user/{userId}
+					handleGetChiTieuMauByUserId(request, response, pathParts);
+					return;
+				} else if ("default".equals(pathParts[2])) {
+					// /api/chitieumau/default
+					handleGetDefaultChiTieuMau(request, response);
+					return;
+				}
+			}
+			// /api/chitieumau
 			handleGetChiTieuMau(request, response);
-		}//cập nhật tên chi tiêu mẫu  
+		} // cập nhật tên chi tiêu mẫu
 		else if ("chitieumau".equals(resource) && pathParts.length > 2 && "update-all-name".equals(pathParts[2])) {
 			// Xử lý cập nhật toàn bộ tên chi tiêu mẫu
 			try {
@@ -358,9 +373,8 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 				response.getWriter().write("{\"error\": \"Invalid request\"}");
 			}
-		}
-		else if ("chitieumau".equals(resource) && pathParts.length > 2) {
-			// PUT /api/chitieumau/{id} 
+		} else if ("chitieumau".equals(resource) && pathParts.length > 2) {
+			// PUT /api/chitieumau/{id}
 			try {
 				int id = Integer.parseInt(pathParts[2]);
 				com.google.gson.JsonObject json = gson.fromJson(request.getReader(), com.google.gson.JsonObject.class);
@@ -403,7 +417,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 //			}
 //		}
 		else {
-			//404 Tài nguyên được yêu cầu không tồn tại trên server.
+			// 404 Tài nguyên được yêu cầu không tồn tại trên server.
 			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			response.getWriter().write("{\"error\": \"Endpoint not found\"}");
 		}
@@ -412,22 +426,24 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		//CORS là cơ chế bảo mật trình duyệt chặn các yêu cầu AJAX từ origin khác
-		//dùng để thiết lập các header CORS cho phép trình duyệt từ domain khác gọi API của bạn một cách hợp lệ.
-		setCorsHeaders(request, response); // 
-		request.setCharacterEncoding("UTF-8");//Thiết lập bảng mã ký tự cho dữ liệu gửi từ client 
-		String pathInfo = request.getPathInfo();//Lấy phần đường dẫn còn lại sau servlet path.
-		response.setContentType("application/json");//Xác định rằng dữ liệu trả về sẽ ở định dạng JSON
-		response.setCharacterEncoding("UTF-8");//Đảm bảo phản hồi gửi về sẽ dùng bảng mã UTF-8
+		// CORS là cơ chế bảo mật trình duyệt chặn các yêu cầu AJAX từ origin khác
+		// dùng để thiết lập các header CORS cho phép trình duyệt từ domain khác gọi API
+		// của bạn một cách hợp lệ.
+		setCorsHeaders(request, response); //
+		request.setCharacterEncoding("UTF-8");// Thiết lập bảng mã ký tự cho dữ liệu gửi từ client
+		String pathInfo = request.getPathInfo();// Lấy phần đường dẫn còn lại sau servlet path.
+		response.setContentType("application/json");// Xác định rằng dữ liệu trả về sẽ ở định dạng JSON
+		response.setCharacterEncoding("UTF-8");// Đảm bảo phản hồi gửi về sẽ dùng bảng mã UTF-8
 
 		if (pathInfo == null || pathInfo.equals("/")) {//// null hoặc ko có gì sau /
-			response.setStatus(HttpServletResponse.SC_NOT_FOUND);//lỗi 404 not found
+			response.setStatus(HttpServletResponse.SC_NOT_FOUND);// lỗi 404 not found
 			response.getWriter().write("{\"error\": \"Endpoint not specified\"}");
 			return;
 		}
 
-		String[] pathParts = pathInfo.split("/");//Tách pathInfo thành các phần nhỏ bằng dấu /
-		String endpoint = pathParts.length > 1 ? pathParts[1] : null; //Nếu mảng có ít nhất 2 phần tử, lấy phần tử thứ hai (index 1) làm endpoint.
+		String[] pathParts = pathInfo.split("/");// Tách pathInfo thành các phần nhỏ bằng dấu /
+		String endpoint = pathParts.length > 1 ? pathParts[1] : null; // Nếu mảng có ít nhất 2 phần tử, lấy phần tử thứ
+																		// hai (index 1) làm endpoint.
 
 		if ("login".equals(endpoint)) {
 			handleLogin(request, response);
@@ -459,8 +475,9 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 		int id_nguoidung;
 	}
 
-	private void handleProcessTransactions(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		    System.out.println("==> ĐÃ VÀO handleProcessTransactions");
+	private void handleProcessTransactions(HttpServletRequest request, HttpServletResponse response)
+			throws IOException {
+		System.out.println("==> ĐÃ VÀO handleProcessTransactions");
 
 		try {
 			String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
@@ -468,10 +485,11 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 
 			if (processRequest == null || processRequest.thang <= 0 || processRequest.id_nguoidung <= 0) {
 				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-				response.getWriter().write(gson.toJson(Map.of("status", "error", "message", "Thiếu hoặc sai tham số 'thang' và 'id_nguoidung'")));
+				response.getWriter().write(gson.toJson(
+						Map.of("status", "error", "message", "Thiếu hoặc sai tham số 'thang' và 'id_nguoidung'")));
 				return;
 			}
-			
+
 			int processedCount = service.processGiaoDichChiTieu(processRequest.thang, processRequest.id_nguoidung);
 
 			if (processedCount >= 0) {
@@ -482,7 +500,8 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			}
 		} catch (Exception e) {
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-			response.getWriter().write(gson.toJson(Map.of("status", "error", "message", "Lỗi server: " + e.getMessage())));
+			response.getWriter()
+					.write(gson.toJson(Map.of("status", "error", "message", "Lỗi server: " + e.getMessage())));
 			e.printStackTrace();
 		}
 	}
@@ -491,12 +510,12 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 	protected void doPut(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		setCorsHeaders(request, response); // thiết lập các HTTP headers cần thiết để hỗ trợ CORS
-		request.setCharacterEncoding("UTF-8");//Thiết lập bảng mã ký tự cho dữ liệu gửi từ client 
-		String pathInfo = request.getPathInfo();// giúp lấy phần đường dẫn sau servlet path		
+		request.setCharacterEncoding("UTF-8");// Thiết lập bảng mã ký tự cho dữ liệu gửi từ client
+		String pathInfo = request.getPathInfo();// giúp lấy phần đường dẫn sau servlet path
 		response.setContentType("application/json");// Thiết lập Content-Type của HTTP response là application/json.
-		response.setCharacterEncoding("UTF-8");// Đặt mã hóa ký tự cho nội dung phản hồi là UTF-8 như t.viet, và  unicode 
+		response.setCharacterEncoding("UTF-8");// Đặt mã hóa ký tự cho nội dung phản hồi là UTF-8 như t.viet, và unicode
 
-		if (pathInfo == null || pathInfo.equals("/")) {//ko có / hoặc chỉ / 
+		if (pathInfo == null || pathInfo.equals("/")) {// ko có / hoặc chỉ /
 			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			response.getWriter().write("{\"error\": \"Endpoint not specified\"}");
 			return;
@@ -504,18 +523,24 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 		String[] pathParts = pathInfo.split("/");
 		String resource = pathParts.length > 1 ? pathParts[1] : null;
 
+		if ("chitieumau".equals(resource) && pathParts.length > 3 && "user".equals(pathParts[2])
+				&& "update-name".equals(pathParts[4])) {
+			handleUpdateTenChiTieuMauByUserId(request, response, pathParts);
+			return;
+		}
+
 		if ("categories".equals(resource) && pathParts.length > 2) {
 			// Expecting /api/categories/{id}
 			try {
 				int categoryId = Integer.parseInt(pathParts[2]);
 				handlePutCategories(request, response, categoryId);
 			} catch (NumberFormatException e) {
-				//400 ko hợp lệ
+				// 400 ko hợp lệ
 				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 				response.getWriter().write("{\"error\": \"Invalid category ID\"}");
 			} catch (Exception e) {
 				e.printStackTrace();
-				//500 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+				// 500 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 				response.getWriter().write("{\"error\": \"Internal server error\"}");
 			}
@@ -591,24 +616,24 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 				response.getWriter().write("{\"error\": \"Internal server error\"}");
 			}
 		} else if ("chi-tieu-hang-thang".equals(resource)) {
-			if (pathParts.length > 2 && "user".equals(pathParts[2]) && pathParts.length > 6 && "month".equals(pathParts[4]) && "year".equals(pathParts[6])) {
+			if (pathParts.length > 2 && "user".equals(pathParts[2]) && pathParts.length > 6
+					&& "month".equals(pathParts[4]) && "year".equals(pathParts[6])) {
 				if (pathParts.length > 8 && "amount".equals(pathParts[8])) {
 					handlePutChiTieuHangThangAmount(request, response, pathParts);
 					return;
 				}
-			} 
-		else {
-			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-			response.getWriter().write("{\"error\": \"Endpoint not found or missing ID\"}");
-		}
+			} else {
+				response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+				response.getWriter().write("{\"error\": \"Endpoint not found or missing ID\"}");
+			}
 
-		System.out.println("DEBUG doPut pathInfo: " + pathInfo);
-		System.out.println("DEBUG doPut pathParts: " + Arrays.toString(pathParts));
-		System.out.println("DEBUG doPut resource: " + resource);
-		
-		//cập nhật chi tiêu mẫu 
+			System.out.println("DEBUG doPut pathInfo: " + pathInfo);
+			System.out.println("DEBUG doPut pathParts: " + Arrays.toString(pathParts));
+			System.out.println("DEBUG doPut resource: " + resource);
+
+			// cập nhật chi tiêu mẫu
 		} else if ("chitieumau".equals(resource) && pathParts.length > 2) {
-			// PUT /api/chitieumau/{id} 
+			// PUT /api/chitieumau/{id}
 			try {
 				int id = Integer.parseInt(pathParts[2]);
 				com.google.gson.JsonObject json = gson.fromJson(request.getReader(), com.google.gson.JsonObject.class);
@@ -737,14 +762,22 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 				response.getWriter().write("{\"error\": \"Internal server error\"}");
 			}
+		} else if ("chitieumau".equals(resource) && pathParts.length > 3 && "user".equals(pathParts[2])) {
+			// Xử lý DELETE /api/chitieumau/user/{userId}
+			try {
+				handleDeleteChiTieuMauByUserId(request, response, pathParts);
+			} catch (Exception e) {
+				e.printStackTrace();
+				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+				response.getWriter().write("{\"error\": \"Internal server error\"}");
+			}
 		} else {
 			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			response.getWriter().write("{\"error\": \"Endpoint not found or missing ID\"}");
 		}
 	}
 
-	
-	//nơi xử lý các y/c lấy danh mục 
+	// nơi xử lý các y/c lấy danh mục
 	private void handleGetCategories(HttpServletRequest request, HttpServletResponse response, String[] pathParts)
 			throws IOException {
 		// Expecting /api/categories/user/{userId}
@@ -756,27 +789,30 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 
 				if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
 					// Người dùng yêu cầu danh mục của người khác hoặc không xác thực
-					response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Yêu cầu đã được xác thực, nhưng người dùng không có quyền truy cập tài nguyên này.
+					response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403 Yêu cầu đã được xác thực, nhưng người
+																			// dùng không có quyền truy cập tài nguyên
+																			// này.
 					response.getWriter().write("{\"error\": \"Forbidden - Cannot access other users' categories\"}");
 					return;
 				}
 
 				List<DanhMuc> categories = service.getDanhMucByUserId(requestedUserId);
 				response.setStatus(HttpServletResponse.SC_OK);
-				//Bạn đang chuyển danh sách categories sang định dạng JSON và ghi nó vào phản hồi HTTP để gửi về client.
+				// Bạn đang chuyển danh sách categories sang định dạng JSON và ghi nó vào phản
+				// hồi HTTP để gửi về client.
 				response.getWriter().write(gson.toJson(categories));
 			} catch (NumberFormatException e) {
-				//400 request ko hợp lệ
+				// 400 request ko hợp lệ
 				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 				response.getWriter().write("{\"error\": \"Invalid user ID\"}");
 			} catch (Exception e) {
 				e.printStackTrace();
-				//500 lỗi server
+				// 500 lỗi server
 				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 				response.getWriter().write("{\"error\": \"Internal server error\"}");
 			}
 		} else {
-			//400 ko tìm thấy trên server
+			// 400 ko tìm thấy trên server
 			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 			response.getWriter().write("{\"error\": \"Endpoint not found. Use /api/categories/user/{userId}\"}");
 		}
@@ -812,7 +848,8 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			// Điều này đảm bảo người dùng chỉ có thể thêm danh mục cho chính họ.
 			newCategory.setId_nguoidung(userId);
 
-			// Bạn đang gọi phương thức addDanhMuc(...) trong lớp service để thêm một danh mục mới
+			// Bạn đang gọi phương thức addDanhMuc(...) trong lớp service để thêm một danh
+			// mục mới
 			boolean success = service.addDanhMuc(newCategory);
 
 			if (success) {
@@ -828,7 +865,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			response.getWriter().write("{\"error\": \"Invalid JSON format\"}");
 		} catch (Exception e) {
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-				response.getWriter().write("{\"error\": \"An unexpected error occurred: " + e.getMessage() + "\"}");
+			response.getWriter().write("{\"error\": \"An unexpected error occurred: " + e.getMessage() + "\"}");
 			e.printStackTrace(); // Log lỗi ra console server để debug
 		}
 	}
@@ -1042,7 +1079,8 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 				// gán id_tennhom = null
 				newGiaoDich.setId_tennhom(null);
 			}
-			// Nếu id_tennhom vẫn là null hoặc rỗng, có thể set giá trị mặc định khác nếu cần
+			// Nếu id_tennhom vẫn là null hoặc rỗng, có thể set giá trị mặc định khác nếu
+			// cần
 
 			// Đảm bảo ngày, tháng, năm được thiết lập nếu cần (từ request hoặc hệ thống)
 			// Logic xử lý ngày, tháng, năm đã được chuyển sang Service để tập trung
@@ -2196,37 +2234,42 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 	}
 
 	// --- Chi tiêu hàng tháng ---
-	private void handleGetAllChiTieuHangThang(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		//List<model.ChiTieuHangThang>	Danh sách đối tượng ChiTieuHangThang nằm trong package model
-		//service.getAllCTHangThang()	Gọi phương thức từ service để lấy toàn bộ chi tiêu hàng tháng 
+	private void handleGetAllChiTieuHangThang(HttpServletRequest request, HttpServletResponse response)
+			throws IOException {
+		// List<model.ChiTieuHangThang> Danh sách đối tượng ChiTieuHangThang nằm trong
+		// package model
+		// service.getAllCTHangThang() Gọi phương thức từ service để lấy toàn bộ chi
+		// tiêu hàng tháng
 		List<model.ChiTieuHangThang> list = service.getAllCTHangThang();
 		response.setStatus(HttpServletResponse.SC_OK);
 		response.setContentType("application/json");
-		//chuyển danh sách list thành JSON bằng thư viện Gson
-		//sau đó ghi chuỗi JSON đó vào phản hồi HTTP để gửi về cho client
+		// chuyển danh sách list thành JSON bằng thư viện Gson
+		// sau đó ghi chuỗi JSON đó vào phản hồi HTTP để gửi về cho client
 		response.getWriter().write(gson.toJson(list));
 	}
-	
-	//lấy chi tiêu hàng tháng bằng tháng , năm
-	private void handleGetChiTieuHangThangByMonth(HttpServletRequest request, HttpServletResponse response, String[] pathParts) throws IOException {
+
+	// lấy chi tiêu hàng tháng bằng tháng , năm
+	private void handleGetChiTieuHangThangByMonth(HttpServletRequest request, HttpServletResponse response,
+			String[] pathParts) throws IOException {
 		// lấy và chuyển đổi các tham số từ URL (dạng RESTful) thành số nguyên
 		int userId = Integer.parseInt(pathParts[3]);
 		int month = Integer.parseInt(pathParts[5]);
 		int year = Integer.parseInt(pathParts[7]);
 		// Gọi service để lấy số tiền
 		java.math.BigDecimal amount = service.getSoTien(userId, month, year);
-		
+
 		// Chuyển BigDecimal thành int (cắt bỏ phần thập phân)
 		int amountAsInt = (amount != null) ? amount.intValue() : 0;
-		
+
 		response.setStatus(HttpServletResponse.SC_OK);
 		response.setContentType("application/json");
 		// Trả về JSON chứa số tiền dạng int
 		response.getWriter().write("{\"amount\": " + amountAsInt + "}");
 	}
-	
-	//lấy số tiền chi tiêu hàng tháng
-	private void handleGetChiTieuHangThangAmount(HttpServletRequest request, HttpServletResponse response, String[] pathParts) throws IOException {
+
+	// lấy số tiền chi tiêu hàng tháng
+	private void handleGetChiTieuHangThangAmount(HttpServletRequest request, HttpServletResponse response,
+			String[] pathParts) throws IOException {
 		int userId = Integer.parseInt(pathParts[3]);
 		int month = Integer.parseInt(pathParts[5]);
 		int year = Integer.parseInt(pathParts[7]);
@@ -2235,9 +2278,10 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 		response.setContentType("application/json");
 		response.getWriter().write("{\"amount\": " + amount + "}");
 	}
-	
-	//cập nhật số tiền hàng tháng
-	private void handlePutChiTieuHangThangAmount(HttpServletRequest request, HttpServletResponse response, String[] pathParts) throws IOException {
+
+	// cập nhật số tiền hàng tháng
+	private void handlePutChiTieuHangThangAmount(HttpServletRequest request, HttpServletResponse response,
+			String[] pathParts) throws IOException {
 		// Đọc body 1 lần duy nhất
 		String body = request.getReader().lines().reduce("", (acc, line) -> acc + line);
 		System.out.println("DEBUG PUT ChiTieuHangThang:");
@@ -2274,7 +2318,8 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 	}
 
 	// --- lấy tất cả Chi tiêu hàng tháng ---
-	private void handleGetAllChiTieuHangThangByUserId(HttpServletRequest request, HttpServletResponse response, String[] pathParts) throws IOException {
+	private void handleGetAllChiTieuHangThangByUserId(HttpServletRequest request, HttpServletResponse response,
+			String[] pathParts) throws IOException {
 		// Endpoint: /api/chi-tieu-hang-thang/user/{userId}/all
 		if (pathParts.length > 4 && "user".equals(pathParts[2]) && "all".equals(pathParts[4])) {
 			try {
@@ -2285,11 +2330,13 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 					response.getWriter().write("{\"error\": \"Unauthorized\"}");
 					return;
 				}
-				// Chỉ cho phép xem của chính mình 
+				// Chỉ cho phép xem của chính mình
 				NguoiDung requestingUser = service.getUserById(authenticatedUserId);
-				if (requestingUser == null || (!"admin".equals(requestingUser.getRole()) && !authenticatedUserId.equals(requestedUserId))) {
+				if (requestingUser == null || (!"admin".equals(requestingUser.getRole())
+						&& !authenticatedUserId.equals(requestedUserId))) {
 					response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-					response.getWriter().write("{\"error\": \"Forbidden - Cannot access other users' monthly expenses\"}");
+					response.getWriter()
+							.write("{\"error\": \"Forbidden - Cannot access other users' monthly expenses\"}");
 					return;
 				}
 				List<model.ChiTieuHangThang> list = service.getAllCTHangThangByUserId(requestedUserId);
@@ -2306,12 +2353,14 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			}
 		} else {
 			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-			response.getWriter().write("{\"error\": \"Endpoint not found. Use /api/chi-tieu-hang-thang/user/{userId}/all\"}");
+			response.getWriter()
+					.write("{\"error\": \"Endpoint not found. Use /api/chi-tieu-hang-thang/user/{userId}/all\"}");
 		}
 	}
 
 	// Thêm hàm xử lý mới cho endpoint ngân sách kế thừa/cập nhật
-	private void handleNganSachOrInheritOrUpdate(HttpServletRequest request, HttpServletResponse response) throws IOException {
+	private void handleNganSachOrInheritOrUpdate(HttpServletRequest request, HttpServletResponse response)
+			throws IOException {
 		class NganSachOrInheritOrUpdateRequest {
 			public int userId;
 			public int thang;
@@ -2320,13 +2369,15 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			public boolean isUpdate;
 		}
 		try {
-			NganSachOrInheritOrUpdateRequest req = gson.fromJson(request.getReader(), NganSachOrInheritOrUpdateRequest.class);
+			NganSachOrInheritOrUpdateRequest req = gson.fromJson(request.getReader(),
+					NganSachOrInheritOrUpdateRequest.class);
 			if (req == null) {
 				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 				response.getWriter().write("{\"error\": \"Invalid request body\"}");
 				return;
 			}
-			double result = service.getOrInheritOrUpdateNganSach(req.userId, req.thang, req.nam, req.newAmount, req.isUpdate);
+			double result = service.getOrInheritOrUpdateNganSach(req.userId, req.thang, req.nam, req.newAmount,
+					req.isUpdate);
 			response.setStatus(HttpServletResponse.SC_OK);
 			response.getWriter().write("{\"ngansach\": " + result + "}");
 		} catch (Exception e) {
@@ -2334,10 +2385,8 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
 		}
 	}
-	
-	
-	
-	//=======cac handle moi=====//
+
+	// =======cac handle moi=====//
 	private void handleGetBuois(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		try {
 			List<model.Buoi> buoi = service.getAllBuoi();
@@ -2348,8 +2397,9 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 			response.getWriter().write("{\"error\": \"Internal server error\"}");
 		}
-		
+
 	}
+
 	private void handleGetMucLuongs(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		try {
 			List<model.MucLuong> mucluong = service.getAllMucLuong();
@@ -2361,7 +2411,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			response.getWriter().write("{\"error\": \"Internal server error\"}");
 		}
 	}
-	
+
 	private void handleGetLoaiChiTieus(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		try {
 			List<model.LoaiChiTieu> loaichitieu = service.getAllLoaiChiTieu();
@@ -2373,6 +2423,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			response.getWriter().write("{\"error\": \"Internal server error\"}");
 		}
 	}
+
 	private void handleGetGoiYs(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		try {
 			List<model.GoiY> goiy = service.getAllGoiY();
@@ -2384,6 +2435,7 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			response.getWriter().write("{\"error\": \"Internal server error\"}");
 		}
 	}
+
 	private void handleGetChiTieuMau(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		try {
 			List<model.ChiTieuMau> chitieumau = service.getAllChiTieuMau();
@@ -2395,9 +2447,120 @@ public class QuanLyChiTieuServlet extends HttpServlet {
 			response.getWriter().write("{\"error\": \"Internal server error\"}");
 		}
 	}
+
 	static {
 		System.out.println("==> STATIC BLOCK QuanLyChiTieuServlet ĐÃ ĐƯỢC LOAD");
 	}
-	
-}
 
+	private void handleGetChiTieuMauByUserId(HttpServletRequest request, HttpServletResponse response,
+			String[] pathParts) throws IOException {
+		try {
+			int requestedUserId = Integer.parseInt(pathParts[3]);
+			// Optional: Authorization check
+			Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+			if (authenticatedUserId == null || !authenticatedUserId.equals(requestedUserId)) {
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+				response.getWriter().write("{\"error\": \"Forbidden - Cannot access other users' templates\"}");
+				return;
+			}
+			List<model.ChiTieuMau> list = service.getChiTieuMauByUserId(requestedUserId);
+			response.setStatus(HttpServletResponse.SC_OK);
+			response.getWriter().write(gson.toJson(list));
+		} catch (NumberFormatException e) {
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			response.getWriter().write("{\"error\": \"Invalid user ID\"}");
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"Internal server error\"}");
+		}
+	}
+
+	private void handleGetDefaultChiTieuMau(HttpServletRequest request, HttpServletResponse response)
+			throws IOException {
+		try {
+			List<model.ChiTieuMau> list = service.getDefaultTemplates();
+			response.setStatus(HttpServletResponse.SC_OK);
+			response.getWriter().write(gson.toJson(list));
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"Internal server error\"}");
+		}
+	}
+
+	private void handleUpdateTenChiTieuMauByUserId(HttpServletRequest request, HttpServletResponse response,
+			String[] pathParts) throws IOException {
+		try {
+			int requestedUserId = Integer.parseInt(pathParts[3]);
+
+			// Kiểm tra quyền
+			Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+			if (authenticatedUserId == null || !authenticatedUserId.equals(requestedUserId)) {
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+				response.getWriter().write("{\"error\": \"Forbidden - You can only update your own templates\"}");
+				return;
+			}
+
+			// Đọc tên mới từ body
+			com.google.gson.JsonObject json = gson.fromJson(request.getReader(), com.google.gson.JsonObject.class);
+			if (json == null || !json.has("ten_moi")) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				response.getWriter().write("{\"error\": \"Missing 'ten_moi' in request body\"}");
+				return;
+			}
+			String tenMoi = json.get("ten_moi").getAsString();
+
+			// Gọi service để cập nhật
+			boolean success = service.updateTenChiTieuMauByUserId(tenMoi, requestedUserId);
+
+			if (success) {
+				response.setStatus(HttpServletResponse.SC_OK);
+				response.getWriter().write("{\"message\": \"Cập nhật tên chi tiêu mẫu thành công\"}");
+			} else {
+				// Có thể không tìm thấy bản ghi nào để cập nhật, nhưng không phải lỗi
+				response.setStatus(HttpServletResponse.SC_OK);
+				response.getWriter()
+						.write("{\"message\": \"Không có chi tiêu mẫu nào được cập nhật (có thể do không có sẵn)\"}");
+			}
+		} catch (NumberFormatException e) {
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			response.getWriter().write("{\"error\": \"Invalid user ID\"}");
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"Internal server error\"}");
+		}
+	}
+
+	private void handleDeleteChiTieuMauByUserId(HttpServletRequest request, HttpServletResponse response,
+			String[] pathParts) throws IOException {
+		try {
+			int requestedUserId = Integer.parseInt(pathParts[3]);
+			Integer authenticatedUserId = (Integer) request.getAttribute(USER_ID_ATTRIBUTE);
+			NguoiDung requestingUser = service.getUserById(authenticatedUserId);
+			if (authenticatedUserId == null || (requestingUser == null)
+					|| (!"admin".equals(requestingUser.getRole()) && !authenticatedUserId.equals(requestedUserId))) {
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+				response.getWriter().write("{\"error\": \"Forbidden - You can only delete your own templates\"}");
+				return;
+			}
+			boolean success = service.deleteChiTieuMauByUserId(requestedUserId);
+			if (success) {
+				response.setStatus(HttpServletResponse.SC_OK);
+				response.getWriter().write("{\"message\": \"Đã xóa tất cả chi tiêu mẫu của người dùng thành công\"}");
+			} else {
+				response.setStatus(HttpServletResponse.SC_OK);
+				response.getWriter().write("{\"message\": \"Không có chi tiêu mẫu nào để xóa hoặc đã xóa\"}");
+			}
+		} catch (NumberFormatException e) {
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			response.getWriter().write("{\"error\": \"Invalid user ID\"}");
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("{\"error\": \"Internal server error\"}");
+		}
+	}
+
+}

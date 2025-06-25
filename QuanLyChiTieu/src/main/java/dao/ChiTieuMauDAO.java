@@ -150,6 +150,21 @@ public class ChiTieuMauDAO implements DAO<ChiTieuMau>  {
 			}
 		}
 
+		// Cập nhật tên chi tiêu mẫu cho một người dùng cụ thể
+		public boolean updateTenChiTieuMauByUserId(String tenMoi, int userId) {
+			String sql = "UPDATE chitieu30ngay SET ten_chi_tieu_mau = ? WHERE id_nguoidung = ?";
+			try (PreparedStatement ps = conn.prepareStatement(sql)) {
+				ps.setString(1, tenMoi);
+				ps.setInt(2, userId);
+				// executeUpdate() trả về số dòng bị ảnh hưởng, 
+				// nếu > 0 tức là có ít nhất 1 dòng đã được cập nhật
+				return ps.executeUpdate() > 0;
+			} catch (SQLException e) {
+				e.printStackTrace();
+				return false;
+			}
+		}
+
 		// Export các khoản chi tiêu từ giao_dich sang chitieu30ngay theo tháng, lấy tên chi tiêu mẫu từ tên danh mục, số tiền từ giao dịch
 		// public List<ChiTieuMau> exportFromGiaoDich(int thang) {
 		// 	System.out.println("[LOG TEST] Vào ChiTieuMauDAO.exportFromGiaoDich");
@@ -259,4 +274,104 @@ public class ChiTieuMauDAO implements DAO<ChiTieuMau>  {
 //			return exportedList;
 //		}
 
+	// Lấy chi tiêu mẫu mặc định (public)
+	public List<ChiTieuMau> getDefaultTemplates() {
+		List<ChiTieuMau> list = new ArrayList<>();
+		String sql = "SELECT * FROM chitieu30ngay WHERE id_nguoidung IS NULL ORDER BY ngay ASC";
+		try (PreparedStatement ps = conn.prepareStatement(sql)) {
+			try (ResultSet rs = ps.executeQuery()) {
+				while (rs.next()) {
+					ChiTieuMau ctm = new ChiTieuMau();
+					ctm.setId(rs.getInt("id"));
+					ctm.setNgay(rs.getInt("ngay"));
+					ctm.setId_muc_luong(rs.getInt("id_muc_luong"));
+					ctm.setId_buoi(rs.getInt("id_buoi"));
+					ctm.setId_loai_chi(rs.getInt("id_loai_chi"));
+					ctm.setId_goi_y(rs.getInt("id_goi_y"));
+					ctm.setTen_chi_tieu_mau(rs.getString("ten_chi_tieu_mau"));
+					Object idNguoiDungObj = rs.getObject("id_nguoidung");
+					ctm.setId_nguoidung(idNguoiDungObj == null ? null : (Integer) idNguoiDungObj);
+					list.add(ctm);
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
+
+	// Lấy chi tiêu mẫu của chỉ userId
+	public List<ChiTieuMau> getByUserId(int userId) {
+		List<ChiTieuMau> list = new ArrayList<>();
+		String sql = "SELECT * FROM chitieu30ngay WHERE id_nguoidung = ? ORDER BY ngay ASC";
+		try (PreparedStatement ps = conn.prepareStatement(sql)) {
+			ps.setInt(1, userId);
+			try (ResultSet rs = ps.executeQuery()) {
+				while (rs.next()) {
+					ChiTieuMau ctm = new ChiTieuMau();
+					ctm.setId(rs.getInt("id"));
+					ctm.setNgay(rs.getInt("ngay"));
+					ctm.setId_muc_luong(rs.getInt("id_muc_luong"));
+					ctm.setId_buoi(rs.getInt("id_buoi"));
+					ctm.setId_loai_chi(rs.getInt("id_loai_chi"));
+					ctm.setId_goi_y(rs.getInt("id_goi_y"));
+					ctm.setTen_chi_tieu_mau(rs.getString("ten_chi_tieu_mau"));
+					ctm.setId_nguoidung(rs.getInt("id_nguoidung"));
+					list.add(ctm);
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
+
+	// Xóa tất cả chi tiêu mẫu của một người dùng
+	public boolean deleteByUserId(int userId) {
+		List<Integer> goiYIds = new ArrayList<>();
+		// 1. Lấy tất cả id_goi_y của user
+		String selectSql = "SELECT id_goi_y FROM chitieu30ngay WHERE id_nguoidung = ?";
+		try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
+			ps.setInt(1, userId);
+			try (ResultSet rs = ps.executeQuery()) {
+				while (rs.next()) {
+					int idGoiY = rs.getInt("id_goi_y");
+					if (idGoiY > 0) goiYIds.add(idGoiY);
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		}
+
+		// 2. Xóa chi tiêu mẫu
+		String deleteChiTieuSql = "DELETE FROM chitieu30ngay WHERE id_nguoidung = ?";
+		try (PreparedStatement ps = conn.prepareStatement(deleteChiTieuSql)) {
+			ps.setInt(1, userId);
+			ps.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		}
+
+		// 3. Xóa các gợi ý liên quan
+		if (!goiYIds.isEmpty()) {
+			StringBuilder sb = new StringBuilder("DELETE FROM goiy WHERE id IN (");
+			for (int i = 0; i < goiYIds.size(); i++) {
+				sb.append("?");
+				if (i < goiYIds.size() - 1) sb.append(",");
+			}
+			sb.append(")");
+			try (PreparedStatement ps = conn.prepareStatement(sb.toString())) {
+				for (int i = 0; i < goiYIds.size(); i++) {
+					ps.setInt(i + 1, goiYIds.get(i));
+				}
+				ps.executeUpdate();
+			} catch (SQLException e) {
+				e.printStackTrace();
+				// Không return false ở đây, vì có thể chi tiêu mẫu đã xóa thành công
+			}
+		}
+		return true;
+	}
 }

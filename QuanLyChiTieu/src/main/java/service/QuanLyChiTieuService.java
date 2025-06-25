@@ -558,12 +558,27 @@ public class QuanLyChiTieuService {
 		return chiTieuMauDAO.getAll();
 	}
 
+	// Lấy chi tiêu mẫu mặc định (public)
+	public List<ChiTieuMau> getDefaultTemplates() {
+		return chiTieuMauDAO.getDefaultTemplates();
+	}
+
+	// Lấy chi tiêu mẫu của userId và mẫu mặc định
+	public List<ChiTieuMau> getChiTieuMauByUserId(int userId) {
+		return chiTieuMauDAO.getByUserId(userId);
+	}
+
 	// Cập nhật tên chi tiêu mẫu
 	public boolean updateChiTieuMauTen(int id, String tenMoi) {
 		model.ChiTieuMau ctm = new model.ChiTieuMau();
 		ctm.setId(id);
 		ctm.setTen_chi_tieu_mau(tenMoi);
 		return chiTieuMauDAO.update(ctm);
+	}
+
+	// Cập nhật tất cả tên chi tiêu mẫu của một người dùng
+	public boolean updateTenChiTieuMauByUserId(String tenMoi, int userId) {
+		return chiTieuMauDAO.updateTenChiTieuMauByUserId(tenMoi, userId);
 	}
 
 	// Cập nhật tất cả tên chi tiêu mẫu thành tên mới
@@ -677,5 +692,10 @@ public class QuanLyChiTieuService {
 		}
 
 		return processedCount;
+	}
+
+	// Xóa tất cả chi tiêu mẫu của một người dùng
+	public boolean deleteChiTieuMauByUserId(int userId) {
+		return chiTieuMauDAO.deleteByUserId(userId);
 	}
 }
